@@ -1,5 +1,5 @@
 // Zone editor: draw PPE zones and no-entry zones on a camera image.
-import { $, $$, api, confirmDialog, errorToast, html, icon, ITEM_LABEL, raw, render, toast } from "../util.js";
+import { $, $$, api, errorToast, html, icon, ITEM_LABEL, raw, render, toast } from "../util.js";
 
 const W = 1000; // SVG units across the image; height follows the aspect ratio
 
@@ -250,6 +250,6 @@ export async function mount(main, [id]) {
   return () => {
     document.removeEventListener("keydown", onKey);
     window.removeEventListener("beforeunload", beforeUnload);
-    if (dirty) confirmDialog("Unsaved zones", "You left the zone editor without saving. The changes were discarded.", "OK", false);
+    if (dirty) toast("Unsaved zone changes were discarded");
   };
 }

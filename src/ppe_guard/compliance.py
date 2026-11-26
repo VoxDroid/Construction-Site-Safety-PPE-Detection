@@ -161,7 +161,7 @@ def associate(detections: Sequence[Detection], min_overlap: float = 0.5) -> list
 
     obs: list[Observation] = []
     for i, p in enumerate(persons):
-        key = f"t{p.track_id}" if p.track_id is not None else f"p{i}"
+        key = f"t{p.track_id}" if p.track_id is not None else f"p{i + 1}"
         obs.append(
             Observation(key=key, box=p.box, items=dict.fromkeys(PPEItem, ItemStatus.UNKNOWN), conf=p.conf)
         )
@@ -181,7 +181,7 @@ def associate(detections: Sequence[Detection], min_overlap: float = 0.5) -> list
                 best_conf[k] = d.conf
                 obs[best_idx].items[item] = status
         elif status is ItemStatus.MISSING:
-            key = f"u{d.track_id}" if d.track_id is not None else f"u{j}"
+            key = f"u{d.track_id}" if d.track_id is not None else f"u{j + 1}"
             items = dict.fromkeys(PPEItem, ItemStatus.UNKNOWN)
             items[item] = ItemStatus.MISSING
             obs.append(Observation(key=key, box=d.box, items=items, conf=d.conf, synthetic=True))

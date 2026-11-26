@@ -53,7 +53,7 @@ export const icon = (name, cls = "") => raw(`<svg class="ic ${cls}" aria-hidden=
 
 export const ITEM_LABEL = { helmet: "Hard hat", vest: "Vest", mask: "Mask" };
 export const STATE_LABEL = {
-  compliant: "Compliant", pending: "Checking", violation: "Violation", unknown: "Not visible", unmonitored: "Outside zones",
+  compliant: "Compliant", pending: "Checking", violation: "Violation", unknown: "Not visible", unmonitored: "No PPE required here",
 };
 
 export function fmtTime(ts, opts = {}) {

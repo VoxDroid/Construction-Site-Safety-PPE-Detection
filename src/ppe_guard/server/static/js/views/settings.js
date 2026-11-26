@@ -33,20 +33,20 @@ const PAGES = {
     <p class="muted small">PPE zones on a camera can override this for their area.</p>
     <h3>Timing</h3>
     <div class="field-grid">
-      ${num("compliance.violation_delay", "Violation delay (s)", 'min="0" max="60" step="0.5"', "How long an item must look missing before a violation opens.")}
-      ${num("compliance.clear_after", "Clear after (s)", 'min="0" max="300" step="0.5"', "Compliant this long and the violation closes.")}
-      ${num("compliance.lost_timeout", "Forget worker after (s)", 'min="0.1" max="300" step="0.5"', "Out of view this long and the worker is dropped.")}
+      ${num("compliance.violation_delay", "Violation delay (s)", 'min="0" max="60" step="any"', "How long an item must look missing before a violation opens.")}
+      ${num("compliance.clear_after", "Clear after (s)", 'min="0" max="300" step="any"', "Compliant this long and the violation closes.")}
+      ${num("compliance.lost_timeout", "Forget worker after (s)", 'min="0.1" max="300" step="any"', "Out of view this long and the worker is dropped.")}
       ${num("compliance.snapshot_interval", "Snapshot every (s)", 'min="1" max="3600" step="1"')}
       ${num("compliance.max_snapshots", "Max snapshots per violation", 'min="1" max="100" step="1"')}
-      ${num("compliance.min_overlap", "Overlap to assign PPE", 'min="0.05" max="1" step="0.05"', "Share of a PPE box that must lie inside the person.")}
+      ${num("compliance.min_overlap", "Overlap to assign PPE", 'min="0.05" max="1" step="any"', "Share of a PPE box that must lie inside the person.")}
     </div>
     ${check("compliance.treat_unseen_as_missing", "Strict mode", "A required item that cannot be seen at all counts as missing.")}
     <h3>Model</h3>
     <div class="field-grid">
       <label class="field">Model<input name="detection.weights" list="models-list" placeholder="auto"><span class="hint">"auto", a model name, or a path to a .pt file. Restart cameras to apply.</span></label>
       <datalist id="models-list">${raw('<option value="auto">')}${models.map((m) => html`<option value="${m.name}">${m.description}${m.downloaded ? "" : " (downloads on first use)"}</option>`)}</datalist>
-      ${num("detection.confidence", "Confidence", 'min="0.01" max="1" step="0.05"', "Lower finds more, with more false alarms.")}
-      ${num("detection.iou", "IoU (NMS)", 'min="0.05" max="1" step="0.05"', "Ignored by NMS-free models such as YOLO26.")}
+      ${num("detection.confidence", "Confidence", 'min="0.01" max="1" step="any"', "Lower finds more, with more false alarms.")}
+      ${num("detection.iou", "IoU (NMS)", 'min="0.05" max="1" step="any"', "Ignored by NMS-free models such as YOLO26.")}
       ${num("detection.imgsz", "Image size", 'min="160" max="1920" step="32"')}
       <label class="field">Device<input name="detection.device" data-nullable placeholder="auto (GPU if available)"><span class="hint">cpu, 0, cuda:0, mps…</span></label>
       <label class="field">Tracker<select name="detection.tracker"><option value="bytetrack.yaml">ByteTrack</option><option value="botsort.yaml">BoT-SORT</option></select></label>

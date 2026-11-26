@@ -24,8 +24,8 @@ class ModelInfo:
 MODELS: dict[str, ModelInfo] = {
     m.alias: m
     for m in (
-        ModelInfo("ppe-yolo26s", "ppe-yolo26s.pt", "YOLO26s fine-tuned for 200 epochs (default)"),
-        ModelInfo("ppe-yolov8s", "ppe-yolov8s.pt", "YOLOv8s fine-tuned for 200 epochs (v1 model)"),
+        ModelInfo("ppe-yolo26s", "ppe-yolo26s.pt", "YOLO26s, 200 epochs, test mAP50-95 0.574"),
+        ModelInfo("ppe-yolov8s", "ppe-yolov8s.pt", "YOLOv8s, 200 epochs, test mAP50-95 0.556 (v1)"),
     )
 }
 DEFAULT_MODEL = "ppe-yolo26s"

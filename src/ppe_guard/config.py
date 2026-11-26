@@ -17,13 +17,13 @@ from pydantic import BaseModel, Field, ValidationError, field_validator
 
 
 class RequiredPPE(BaseModel):
-    helmet: bool = True
-    vest: bool = True
-    mask: bool = False
+    helmet: bool = Field(True, description="Hard hat required.")
+    vest: bool = Field(True, description="High-visibility safety vest required.")
+    mask: bool = Field(False, description="Face mask required.")
 
 
 class ComplianceSettings(BaseModel):
-    required_ppe: RequiredPPE = Field(default_factory=RequiredPPE)
+    required_ppe: RequiredPPE = Field(default_factory=RequiredPPE, description="Items every worker must wear.")
     violation_delay: float = Field(
         2.0, ge=0, le=60, description="Seconds an item must look missing before a violation opens."
     )
@@ -40,23 +40,31 @@ class ComplianceSettings(BaseModel):
     min_overlap: float = Field(
         0.5, gt=0, le=1, description="Share of a PPE box that must lie inside a person box."
     )
-    snapshot_interval: float = Field(10.0, ge=1, le=3600)
-    max_snapshots: int = Field(5, ge=1, le=100)
+    snapshot_interval: float = Field(
+        10.0, ge=1, le=3600, description="Seconds between snapshots of an ongoing violation."
+    )
+    max_snapshots: int = Field(5, ge=1, le=100, description="Snapshots kept per violation.")
 
 
 class DetectionSettings(BaseModel):
     weights: str = Field("auto", description="Path, model alias (see `ppe-guard weights list`) or 'auto'.")
-    confidence: float = Field(0.40, ge=0.01, le=1)
-    iou: float = Field(0.50, ge=0.05, le=1)
-    imgsz: int = Field(640, ge=160, le=1920)
-    device: str | None = Field(None, description="'cpu', '0', 'cuda:0', 'mps'... None = auto.")
-    tracker: Literal["bytetrack.yaml", "botsort.yaml"] = "bytetrack.yaml"
+    confidence: float = Field(
+        0.40, ge=0.01, le=1, description="Minimum detection confidence. Lower finds more, with more false alarms."
+    )
+    iou: float = Field(0.50, ge=0.05, le=1, description="NMS overlap threshold (ignored by NMS-free models).")
+    imgsz: int = Field(640, ge=160, le=1920, description="Inference image size in pixels.")
+    device: str | None = Field(None, description="'cpu', '0', 'cuda:0', 'mps'... null = GPU if available.")
+    tracker: Literal["bytetrack.yaml", "botsort.yaml"] = Field(
+        "bytetrack.yaml", description="Multi-object tracker that keeps worker IDs across frames."
+    )
     max_fps: float = Field(15.0, ge=1, le=120, description="Upper bound on processed frames per second.")
 
 
 class AlertSettings(BaseModel):
-    webhook_url: str | None = None
-    format: Literal["generic", "slack", "discord"] = "generic"
+    webhook_url: str | None = Field(None, description="URL that receives a POST for each new violation.")
+    format: Literal["generic", "slack", "discord"] = Field(
+        "generic", description="Payload shape: generic JSON, Slack or Discord."
+    )
     cooldown: float = Field(60.0, ge=0, le=86400, description="Minimum seconds between alerts per camera.")
     public_url: str | None = Field(
         None, description="Dashboard address included in alert messages, e.g. https://ppe.example.com"
@@ -92,13 +100,17 @@ class Zone(BaseModel):
     """
 
     id: str = Field(..., description="Short slug, unique per camera.")
-    name: str = Field(..., min_length=1, max_length=60)
-    kind: Literal["ppe", "restricted"] = "ppe"
-    points: list[tuple[float, float]] = Field(..., min_length=3, max_length=64)
+    name: str = Field(..., min_length=1, max_length=60, description="Shown on the video and in violations.")
+    kind: Literal["ppe", "restricted"] = Field(
+        "ppe", description="'ppe': check PPE inside. 'restricted': nobody may enter."
+    )
+    points: list[tuple[float, float]] = Field(
+        ..., min_length=3, max_length=64, description="Polygon corners as [x, y] pairs in 0-1."
+    )
     required_ppe: RequiredPPE | None = Field(
         None, description="PPE zones only: items required inside this zone (default: global rule)."
     )
-    enabled: bool = True
+    enabled: bool = Field(True, description="Disabled zones are kept but ignored.")
 
     @field_validator("id")
     @classmethod
@@ -118,12 +130,12 @@ class Zone(BaseModel):
 
 class CameraConfig(BaseModel):
     id: str = Field(..., description="Short slug, e.g. 'gate-north'.")
-    name: str = Field(..., min_length=1, max_length=80)
+    name: str = Field(..., min_length=1, max_length=80, description="Display name.")
     source: str = Field(..., min_length=1, description="Webcam index ('0'), file path, or rtsp/http URL.")
-    enabled: bool = True
-    autostart: bool = False
+    enabled: bool = Field(True, description="Disabled cameras cannot be started.")
+    autostart: bool = Field(False, description="Start this camera when the server starts.")
     loop: bool = Field(True, description="Restart video files when they end.")
-    zones: list[Zone] = Field(default_factory=list)
+    zones: list[Zone] = Field(default_factory=list, description="PPE and no-entry zones (see below).")
 
     @field_validator("id")
     @classmethod

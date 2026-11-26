@@ -139,6 +139,8 @@ class CameraWorker:
 
     def _set_status(self, status: str, error: str | None = None) -> None:
         self.status, self.error = status, error
+        if error:
+            print(f"[ppe-guard] camera '{self.cfg.id}': {status}: {error}", flush=True)
         self._publish({"type": "camera", "camera_id": self.cfg.id, "status": status, "error": error})
 
     def _open(self) -> cv2.VideoCapture:

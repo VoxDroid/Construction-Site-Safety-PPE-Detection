@@ -6,9 +6,9 @@ const PAGE = 25;
 const PERIODS = { "": "All time", 1: "Last 24 hours", 7: "Last 7 days", 30: "Last 30 days", 90: "Last 90 days" };
 
 function statusPill(v) {
-  if (v.ongoing) return html`<span class="pill bad"><span class="dot"></span>Ongoing</span>`;
-  if (v.acknowledged) return html`<span class="pill good">${icon("check", "ic-sm")}Reviewed</span>`;
-  return html`<span class="pill">Needs review</span>`;
+  const ongoing = v.ongoing ? html`<span class="pill bad"><span class="dot"></span>Ongoing</span> ` : "";
+  if (v.acknowledged) return html`${ongoing}<span class="pill good">${icon("check", "ic-sm")}Reviewed</span>`;
+  return v.ongoing ? ongoing : html`<span class="pill">Needs review</span>`;
 }
 
 export async function openViolation(id, { onChange } = {}) {
@@ -21,7 +21,7 @@ export async function openViolation(id, { onChange } = {}) {
     <div class="dialog-head">
       <h2>${violationTitle(v)}</h2>
       <a class="btn sm ghost" href="#/cameras/${v.camera_id}">${v.camera_name}</a>
-      <button class="icon-btn" data-close aria-label="Close">${icon("x")}</button>
+      <button class="icon-btn" data-close aria-label="Close" autofocus>${icon("x")}</button>
     </div>
     <div class="dialog-body">
       <div class="detail-grid">

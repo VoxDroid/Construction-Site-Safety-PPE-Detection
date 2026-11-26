@@ -117,15 +117,15 @@ export function rateLine(el, { labels, values, height = 200, color = "var(--s1)"
     const m = { t: 12, r: 10, b: 24, l: 44 };
     const iw = w - m.l - m.r, ih = height - m.t - m.b;
     const present = values.filter((v) => v !== null && v !== undefined);
-    const lo = present.length ? Math.max(0, Math.floor((Math.min(...present) - 0.02) * 20) / 20) : 0;
-    const min = Math.min(lo, 0.8);
+    const lowest = present.length ? Math.min(...present) : 1;
+    // Axis floor and step chosen so every tick is a round percentage.
+    const [min, step] = [[0.9, 0.025], [0.8, 0.05], [0.6, 0.1], [0, 0.25]].find(([f]) => lowest >= f + 0.01) || [0, 0.25];
     const y = (v) => m.t + ih - ((v - min) / (1 - min)) * ih;
     const x = (i) => m.l + (labels.length === 1 ? iw / 2 : (iw * i) / (labels.length - 1));
     const g = add(svg, "g", { class: "grid" });
-    for (let k = 0; k <= 4; k++) {
-      const v = min + ((1 - min) / 4) * k;
+    for (let v = min; v <= 1 + 1e-9; v += step) {
       add(g, "line", { x1: m.l, x2: w - m.r, y1: y(v), y2: y(v) });
-      add(svg, "text", { x: m.l - 6, y: y(v) + 4, "text-anchor": "end" }, `${Math.round(v * 100)}%`);
+      add(svg, "text", { x: m.l - 6, y: y(v) + 4, "text-anchor": "end" }, `${+(v * 100).toFixed(1)}%`);
     }
     const every = Math.ceil(labels.length / Math.max(1, Math.floor(iw / 56)));
     labels.forEach((lab, i) => { if (i % every === 0) add(svg, "text", { x: x(i), y: height - 6, "text-anchor": "middle" }, lab); });

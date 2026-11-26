@@ -19,7 +19,7 @@ export function workerChip(w) {
     return html`<span class="${cls}">${ITEM_LABEL[i]} ${m}</span>`;
   });
   if (w.intrusion) items.push(html`<span class="no">in ${w.intrusion}</span>`);
-  if (w.state === "unmonitored") items.push(html`<span class="unk">outside zones</span>`);
+  if (w.state === "unmonitored") items.push(html`<span class="unk">no PPE needed here</span>`);
   return html`<span class="chip ${w.state}" title="${workerName(w.key)}"><span class="id">${w.synthetic ? "?" : "#"}${w.key.slice(1)}</span>${items}</span>`;
 }
 
@@ -55,7 +55,8 @@ function camCard(c) {
 
 function feedItem(v, event) {
   const closed = event === "closed";
-  const text = closed ? `cleared after ${Math.max(1, Math.round((v.ended_at || v.last_seen) - v.started_at))}s` : violationTitle(v).toLowerCase();
+  const what = v.kind === "zone" ? `entered ${v.zone_name || "a no-entry zone"}` : violationTitle(v).toLowerCase();
+  const text = closed ? `cleared after ${Math.max(1, Math.round((v.ended_at || v.last_seen) - v.started_at))}s` : what;
   return html`<a class="feed-item ${closed ? "closed" : ""}" href="#/violations/${v.id}">
     <span class="bar"></span>
     <span><b>${v.camera_name}</b> · ${workerName(v.worker_key)} ${text}<br><span class="t">${fmtTime(closed ? v.ended_at || v.last_seen : v.started_at)}</span></span>

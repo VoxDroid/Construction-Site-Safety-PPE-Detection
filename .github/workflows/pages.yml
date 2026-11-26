@@ -3,7 +3,7 @@ name: Pages
 on:
   push:
     branches: [main]
-    paths: ["docs/**", ".github/workflows/pages.yml"]
+    paths: ["docs/**", "mkdocs.yml", "CHANGELOG.md", "CONTRIBUTING.md", ".github/workflows/pages.yml"]
   workflow_dispatch:
 
 permissions:
@@ -15,6 +15,10 @@ concurrency:
   group: pages
   cancel-in-progress: true
 
+env:
+  # The browser demo loads this model; it lives in the release, not in the repository.
+  DEMO_MODEL_URL: https://github.com/VoxDroid/ppe-guard/releases/download/v2.0.0/ppe-yolo26s.onnx
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -23,9 +27,17 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install "mkdocs-material>=9.5,<10"
+      - name: Fetch the demo model
+        run: curl -fsSL -o docs/demo/ppe-yolo26s.onnx "$DEMO_MODEL_URL"
+      - name: Build the site
+        run: mkdocs build --strict
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: docs
+          path: site
       - id: deployment
         uses: actions/deploy-pages@v4

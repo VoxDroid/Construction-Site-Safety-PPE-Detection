@@ -2,6 +2,18 @@ name: Bug report
 description: Something doesn't work as documented
 labels: [bug]
 body:
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where?
+      options:
+        - Dashboard (ppe-guard serve)
+        - Command line (predict, train, val, ...)
+        - Docker
+        - Browser demo
+        - Documentation
+    validations:
+      required: true
   - type: textarea
     id: what
     attributes:

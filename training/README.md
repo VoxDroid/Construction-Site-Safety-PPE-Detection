@@ -1,5 +1,8 @@
 # Training
 
+The full guide, including fine-tuning on your own site's footage, is at
+<https://voxdroid.github.io/ppe-guard/reference/training/>.
+
 | File | Purpose |
 | --- | --- |
 | `data.yaml` | Dataset config. Paths are relative to this file and point to `../datasets/css`. |

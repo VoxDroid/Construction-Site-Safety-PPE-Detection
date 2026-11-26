@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>PPE Guard live demo</title>
+  <meta name="description" content="Try the PPE Guard hard hat and safety vest model in your browser. Nothing is uploaded.">
+  <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f4f1; --surface: #fff; --surface-2: #f6f6f3; --surface-3: #ecebe6;
+      --border: rgba(11,11,11,.10); --border-strong: rgba(11,11,11,.18);
+      --text: #111110; --text-2: #52514e; --muted: #7d7b75;
+      --accent: #f5b700; --accent-strong: #d99e00; --accent-ink: #1d1600; --accent-soft: rgba(245,183,0,.16);
+      --good: #0ca30c; --good-text: #006300; --good-soft: rgba(12,163,12,.12);
+      --bad: #d03b3b; --bad-text: #b32626; --bad-soft: rgba(208,59,59,.12);
+      --warn-soft: rgba(250,178,25,.18); --info: #2a78d6; --info-soft: rgba(42,120,214,.12);
+      --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        color-scheme: dark;
+        --bg: #0e0e0d; --surface: #1a1a19; --surface-2: #212120; --surface-3: #2a2a28;
+        --border: rgba(255,255,255,.09); --border-strong: rgba(255,255,255,.18);
+        --text: #f0efec; --text-2: #c3c2b7; --muted: #8f8d86;
+        --good-text: #3ccf3c; --good-soft: rgba(12,163,12,.18); --bad-text: #f07070; --bad-soft: rgba(230,103,103,.16);
+        --info-soft: rgba(57,135,229,.18);
+      }
+    }
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #0e0e0d; --surface: #1a1a19; --surface-2: #212120; --surface-3: #2a2a28;
+      --border: rgba(255,255,255,.09); --border-strong: rgba(255,255,255,.18);
+      --text: #f0efec; --text-2: #c3c2b7; --muted: #8f8d86;
+      --good-text: #3ccf3c; --good-soft: rgba(12,163,12,.18); --bad-text: #f07070; --bad-soft: rgba(230,103,103,.16);
+      --info-soft: rgba(57,135,229,.18);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); }
+    a { color: inherit; }
+    header.top { display: flex; align-items: center; gap: 12px; padding: 14px 24px; background: var(--surface); border-bottom: 1px solid var(--border); }
+    header.top .brand { display: flex; align-items: center; gap: 10px; font-weight: 680; text-decoration: none; font-size: 17px; }
+    header.top nav { margin-left: auto; display: flex; gap: 18px; font-size: 14px; }
+    header.top nav a { text-decoration: none; color: var(--text-2); }
+    header.top nav a:hover { color: var(--text); }
+    main { max-width: 1200px; margin: 0 auto; padding: 28px 24px 60px; }
+    h1 { font-size: 28px; margin: 0 0 6px; letter-spacing: -.02em; }
+    .lead { color: var(--text-2); margin: 0 0 22px; max-width: 760px; }
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 18px; align-items: start; }
+    @media (max-width: 960px) { .layout { grid-template-columns: 1fr; } }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; }
+    .pad { padding: 16px 18px; }
+    .stage { position: relative; background: #0b0b0b; border-radius: 14px; overflow: hidden; min-height: 320px; display: grid; place-items: center; }
+    .stage canvas { width: 100%; height: auto; display: block; }
+    .stage .msg[hidden], .bar[hidden] { display: none; }
+    .stage .msg { color: #c3c2b7; text-align: center; padding: 24px; position: absolute; inset: 0; display: grid; place-content: center; gap: 10px; }
+    .bar { height: 6px; width: 260px; border-radius: 3px; background: #2a2a28; overflow: hidden; margin: 0 auto; }
+    .bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .btn { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: 9px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); font: inherit; font-weight: 560; cursor: pointer; text-decoration: none; }
+    .btn:hover { background: var(--surface-2); }
+    .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .samples { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
+    .samples button { padding: 0; border: 2px solid transparent; border-radius: 9px; overflow: hidden; cursor: pointer; background: none; aspect-ratio: 1; }
+    .samples button.active { border-color: var(--accent); }
+    .samples img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    h2 { font-size: 15px; margin: 0 0 10px; }
+    label.check { display: flex; gap: 8px; align-items: center; margin: 6px 0; cursor: pointer; }
+    input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--accent-strong); }
+    input[type=range] { width: 100%; accent-color: var(--accent-strong); }
+    .verdict { padding: 12px 14px; border-radius: 10px; font-weight: 600; margin-bottom: 12px; }
+    .verdict.bad { background: var(--bad-soft); color: var(--bad-text); }
+    .verdict.good { background: var(--good-soft); color: var(--good-text); }
+    .verdict.none { background: var(--surface-3); color: var(--text-2); }
+    .workers { display: flex; flex-direction: column; gap: 6px; }
+    .worker { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 9px; font-size: 13.5px; }
+    .worker .id { font-weight: 700; min-width: 30px; }
+    .pill { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 11px; font-size: 12px; font-weight: 620; }
+    .pill.bad { background: var(--bad-soft); color: var(--bad-text); }
+    .pill.good { background: var(--good-soft); color: var(--good-text); }
+    .pill.na { background: var(--surface-3); color: var(--muted); }
+    .muted { color: var(--muted); } .small { font-size: 12.5px; }
+    .stack > * + * { margin-top: 14px; }
+    .note { font-size: 12.5px; color: var(--muted); margin-top: 18px; }
+    .drop-hint { border: 2px dashed var(--border-strong); border-radius: 10px; padding: 14px; text-align: center; color: var(--text-2); font-size: 13.5px; cursor: pointer; }
+    .drop-hint.over { border-color: var(--accent); background: var(--accent-soft); }
+    @media (max-width: 600px) { header.top nav { display: none; } main { padding: 20px 16px 48px; } .samples { grid-template-columns: repeat(4, 1fr); } }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <a class="brand" href="../"><img src="../assets/favicon.svg" width="26" height="26" alt="">PPE Guard</a>
+    <nav><a href="../">Docs</a><a href="../getting-started/quickstart/">Install</a><a href="https://github.com/VoxDroid/ppe-guard">GitHub</a></nav>
+  </header>
+  <main>
+    <h1>Try the model in your browser</h1>
+    <p class="lead">This page runs the PPE Guard YOLO26s model on your device with ONNX Runtime Web. Pick a sample, choose a photo, or turn on your camera. <b>Nothing is uploaded.</b> The full app adds tracking over time, zones, alerts and reports.</p>
+    <div class="layout">
+      <div class="stack">
+        <div class="stage" id="stage">
+          <canvas id="canvas" hidden></canvas>
+          <div class="msg" id="msg"><div id="msg-text">Loading the model (38 MB, cached after the first visit)…</div><div class="bar"><i id="bar"></i></div></div>
+        </div>
+        <div class="row">
+          <label class="btn primary" for="file">Choose a photo</label>
+          <input type="file" id="file" accept="image/*" hidden>
+          <button class="btn" id="cam" disabled>Use my camera</button>
+          <span class="muted small" id="timing"></span>
+        </div>
+        <div>
+          <div class="muted small">Samples from the Construction Site Safety test set (Roboflow, CC BY 4.0). The model never saw them during training.</div>
+          <div class="samples" id="samples">
+            <button data-src="samples/ladder.jpg" aria-label="Sample: ladder work"><img src="samples/ladder.jpg" alt=""></button>
+            <button data-src="samples/concrete.jpg" aria-label="Sample: concrete work"><img src="samples/concrete.jpg" alt=""></button>
+            <button data-src="samples/visitors.jpg" aria-label="Sample: site visit"><img src="samples/visitors.jpg" alt=""></button>
+            <button data-src="samples/roof.jpg" aria-label="Sample: roof crew"><img src="samples/roof.jpg" alt=""></button>
+          </div>
+        </div>
+      </div>
+      <aside class="stack">
+        <section class="card pad">
+          <h2>Result</h2>
+          <div id="verdict" class="verdict none">Waiting for an image</div>
+          <div class="workers" id="workers"></div>
+        </section>
+        <section class="card pad">
+          <h2>Rules</h2>
+          <label class="check"><input type="checkbox" data-req="helmet" checked>Hard hat required</label>
+          <label class="check"><input type="checkbox" data-req="vest" checked>Safety vest required</label>
+          <label class="check"><input type="checkbox" data-req="mask">Face mask required</label>
+          <label class="check"><input type="checkbox" id="show-items" checked>Show equipment boxes</label>
+          <div style="margin-top:10px"><div class="row" style="justify-content:space-between"><span>Confidence</span><span id="conf-v">0.40</span></div>
+            <input type="range" id="conf" min="0.1" max="0.9" step="0.05" value="0.4"></div>
+        </section>
+        <div class="drop-hint" id="drop">Or drop an image anywhere on this box</div>
+      </aside>
+    </div>
+    <p class="note">Detections can be wrong: the model sees single frames here, without the smoothing over time that the full app uses to avoid false alarms. Model weights are derived from Ultralytics YOLO (AGPL-3.0).</p>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/ort.min.js"></script>
+  <script type="module" src="demo.js"></script>
+</body>
+</html>

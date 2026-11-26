@@ -1,278 +1,193 @@
 <div align="center">
 
+<img src="docs/assets/favicon.svg" width="72" height="72" alt="">
+
 # PPE Guard
 
-**Real-time PPE compliance monitoring for construction sites.**
-It spots workers without hard hats or hi-vis vests, judges each worker separately, keeps snapshot evidence and sends alerts.
+**Real-time PPE monitoring for construction sites.**<br>
+Checks every worker for a hard hat, safety vest and mask on any camera, enforces zones,
+keeps video evidence, sends alerts and reports your compliance rate.
 
 [![CI](https://github.com/VoxDroid/ppe-guard/actions/workflows/ci.yml/badge.svg)](https://github.com/VoxDroid/ppe-guard/actions/workflows/ci.yml)
+[![Docs](https://img.shields.io/badge/docs-voxdroid.github.io%2Fppe--guard-f5b700)](https://voxdroid.github.io/ppe-guard/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-![Python](https://img.shields.io/badge/python-3.10%E2%80%933.13-blue)
-![Models](https://img.shields.io/badge/models-YOLO26s%20%7C%20YOLOv8s-f5b700)
+![Python](https://img.shields.io/badge/python-3.10%2B-blue)
+![Model](https://img.shields.io/badge/model-YOLO26s-f5b700)
 
-[Website](https://voxdroid.github.io/ppe-guard/) ·
+**[Try it in your browser](https://voxdroid.github.io/ppe-guard/demo/)** ·
+[Documentation](https://voxdroid.github.io/ppe-guard/) ·
 [Quick start](#quick-start) ·
-[Dashboard](#the-dashboard) ·
-[Model results](#model-results) ·
-[Train your own](#training)
+[Results](#how-accurate-is-it)
 
-<img src="docs/assets/demo.gif" alt="Workers on a construction site with detection boxes around hard hats, vests and people" width="720">
+<img src="docs/assets/screenshots/live.png" alt="PPE Guard live view: cameras with workers boxed green or red, chips showing each worker's hard hat and vest status, and a live event feed" width="900">
 
 </div>
 
----
-
 ## Why
 
-Construction is one of the most dangerous industries. In the US, construction and extraction workers
-accounted for **976 of the 4,764 fatal work injuries in 2020**
-([BLS Census of Fatal Occupational Injuries](https://www.bls.gov/news.release/archives/cfoi_12162021.htm)).
-Hard hats and high-visibility clothing are basic controls, but checking them all day across a busy
-site is hard to do by hand.
+Construction is one of the most dangerous industries. In the US, construction and extraction
+workers accounted for **976 of the 4,764 fatal work injuries in 2020**
+([BLS](https://www.bls.gov/news.release/archives/cfoi_12162021.htm)). Hard hats and
+high-visibility clothing are basic controls, but checking them all day across a busy site is hard
+to do by hand.
 
-PPE Guard watches existing cameras and flags workers who are missing required equipment. Site
-supervisors get a short, reviewable list of incidents with photos, not a wall of raw detections.
+PPE Guard watches the cameras you already have. Supervisors get a short, reviewable list of
+incidents with snapshots and clips, a live view of who is missing what, and numbers that show
+whether things are getting better.
 
 > [!IMPORTANT]
-> PPE Guard is a decision-support tool, not a certified safety system. It will miss some
-> violations and raise some false alarms. Keep a human in the loop and follow your local rules on
-> workplace video monitoring and worker privacy.
+> PPE Guard helps people notice problems sooner. It is not a certified safety system: it will miss
+> some violations and raise some false alarms. Keep your normal supervision in place, and follow
+> local rules on video monitoring at work.
 
 ## Features
 
-- **Per-worker verdicts.** Hard hats, vests and masks are matched to the person wearing them,
-  using overlap plus a body-region check (head vs. torso). One worker's helmet can't make the
-  person next to them look compliant.
-- **Tracking with smoothing.** ByteTrack follows each person across frames. A violation opens
-  only after an item has looked missing for most of a configurable window (2 s by default), so a
-  single bad frame doesn't trigger an alert. It closes once the worker is compliant again or
-  leaves the frame.
-- **Any camera.** Webcams, video files and RTSP/HTTP IP cameras, several at once, with automatic
-  reconnect for streams.
-- **Evidence and review.** Every violation is stored with timestamped snapshots, can be marked
-  reviewed with a note, and can be exported to CSV for audits.
-- **Alerts.** Webhooks in generic JSON, Slack or Discord format, with a per-camera cooldown.
-- **Configurable rules.** Choose the required PPE per site (helmet, vest, mask), plus
-  timing, confidence and strict mode (anything not visible counts as missing).
-- **Runs anywhere.** One `pip install`, or Docker on CPU or an NVIDIA GPU. A REST and WebSocket
-  API lets you plug it into other systems.
-- **Reproducible training.** The dataset download, training, evaluation and export are all one
-  command each.
+| | |
+| --- | --- |
+| **Per-worker checks** | PPE is matched to the person wearing it (overlap plus body position) and followed over time with ByteTrack. One worker's hard hat never makes another look compliant. |
+| **No false alarms from one bad frame** | A violation opens only after an item has looked missing for most of a configurable delay, and closes once the worker is compliant again or leaves. |
+| **Zones** | Draw areas on each camera: require PPE only where it matters, set different rules per area (masks in the paint shop), and mark no-entry zones that flag anyone who walks in. |
+| **Evidence** | Snapshots and a short video clip, starting a few seconds before the violation, for every incident. Notes, review status, bulk actions and CSV export. |
+| **Analytics and reports** | Compliance rate over monitored worker-time, trends, a weekday-by-hour heatmap, per-camera numbers, and printable daily or weekly reports. |
+| **Alerts** | Slack, Discord or any JSON webhook, with a per-camera cooldown. A WebSocket feed for your own tools. |
+| **Analyze files** | Drop in a photo or recorded video and get an annotated result with a per-worker verdict and a violation timeline. |
+| **Any camera** | Webcams, video files, RTSP and HTTP streams, many at once, with automatic reconnect. |
+| **Secure and private** | Runs on your hardware, nothing leaves your network. Optional password login, API tokens and login rate limiting. |
+| **Easy to run** | `pip install` and one command, or Docker (CPU or NVIDIA GPU). The dashboard works on phones. Full REST API. |
+
+<table>
+<tr>
+<td><img src="docs/assets/screenshots/zones.png" alt="Zone editor with a PPE zone and a no-entry zone drawn over a construction site"></td>
+<td><img src="docs/assets/screenshots/violation-detail.png" alt="A violation with its video clip, snapshots, details and a review note"></td>
+</tr>
+<tr>
+<td><img src="docs/assets/screenshots/analytics.png" alt="Analytics: violations per day, compliance rate, heatmap and per-camera table"></td>
+<td><img src="docs/assets/screenshots/analyze-video.png" alt="Analyze page with an annotated video and a timeline of violations"></td>
+</tr>
+</table>
+
+## Quick start
+
+Python 3.10 or newer. If you have an NVIDIA GPU, install the
+[PyTorch build](https://pytorch.org/get-started/locally/) for it first, then:
+
+```bash
+pip install "git+https://github.com/VoxDroid/ppe-guard.git"
+ppe-guard serve
+```
+
+Open <http://localhost:8000>, add a camera in **Settings → Cameras** (`0` for a webcam, a video
+file, or an `rtsp://` address) and press **Start**. The model (20 MB) downloads on first use.
+
+Before opening the dashboard to your network, set a password:
+
+```bash
+ppe-guard password set
+ppe-guard serve --host 0.0.0.0
+```
+
+**With Docker:**
+
+```bash
+git clone https://github.com/VoxDroid/ppe-guard.git && cd ppe-guard
+docker compose up -d --build
+```
+
+**From the command line**, without the dashboard:
+
+```bash
+ppe-guard predict site.jpg                   # one photo: a verdict per worker
+ppe-guard predict photos/ --save checked/    # a folder, with annotated copies
+ppe-guard predict shift.mp4 --save checked/  # a video: violations as they happen
+```
+
+Full guides: [installation](https://voxdroid.github.io/ppe-guard/getting-started/installation/),
+[cameras](https://voxdroid.github.io/ppe-guard/guide/cameras/),
+[zones](https://voxdroid.github.io/ppe-guard/guide/zones/),
+[alerts](https://voxdroid.github.io/ppe-guard/guide/alerts/),
+[security](https://voxdroid.github.io/ppe-guard/guide/security/),
+[production](https://voxdroid.github.io/ppe-guard/deployment/production/) and the
+[API](https://voxdroid.github.io/ppe-guard/reference/api/).
 
 ## How it works
 
 ```mermaid
 flowchart LR
-    A[Camera / video / RTSP] --> B[YOLO detector<br/>10 classes]
-    B --> C[ByteTrack<br/>person IDs]
-    C --> D[Assign PPE to person<br/>overlap + body region]
-    D --> E[Per-worker history<br/>smoothing over N seconds]
-    E -->|missing long enough| F[Violation opened]
-    F --> G[(SQLite + snapshots)]
-    F --> H[Webhook alert]
-    F --> I[Live dashboard]
+    A[Camera] --> B[YOLO26 detector] --> C[ByteTrack IDs] --> D[Match PPE to each worker]
+    D --> E[Zones: what is required here?] --> F[Smoothing over time] --> G[Violation]
+    G --> H[Snapshots and clip]
+    G --> I[Alert]
+    G --> J[Database, analytics, reports]
 ```
 
-The detector recognises 10 classes: `Hardhat`, `NO-Hardhat`, `Safety Vest`, `NO-Safety Vest`,
-`Mask`, `NO-Mask`, `Person`, `Safety Cone`, `machinery` and `vehicle`. For every tracked person,
-each required item is **worn**, **missing** or **unknown** (not visible). A missing item has to
-persist for the violation delay before it counts.
+The model detects people and PPE (`Hardhat`, `NO-Hardhat`, `Safety Vest`, `NO-Safety Vest`,
+`Mask`, `NO-Mask`, plus cones, machinery and vehicles). Each PPE box is assigned to the person
+who contains most of it, if it sits in a plausible place on the body. A short history per worker
+and item filters out single-frame mistakes. Details:
+[How detection works](https://voxdroid.github.io/ppe-guard/guide/how-it-works/).
 
-## Quick start
+## How accurate is it?
 
-**Requirements:** Python 3.10 to 3.13. An NVIDIA GPU is recommended for live video. A CPU works
-for images and is usable on a single low-resolution stream.
-
-```bash
-git clone https://github.com/VoxDroid/ppe-guard.git
-cd ppe-guard
-python -m venv .venv
-source .venv/bin/activate            # Windows: .venv\Scripts\activate
-
-# 1. Install PyTorch for your hardware (see https://pytorch.org/get-started/locally/)
-pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128   # NVIDIA GPU
-# pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu   # CPU only
-
-# 2. Install PPE Guard
-pip install -e .
-
-# 3. Check your setup and fetch the trained model
-ppe-guard doctor
-ppe-guard weights download
-```
-
-### Check an image, a folder or a video
-
-```bash
-ppe-guard predict site_photo.jpg --save out/
-ppe-guard predict photos/ --require helmet,vest,mask
-ppe-guard predict shift_recording.mp4 --show --save out/
-ppe-guard predict rtsp://user:pass@192.168.1.20/stream1 --show
-```
-
-```text
-site_photo.jpg: 3 worker(s), 1 non-compliant
-     p0  compliant  helmet=worn, vest=worn, mask=unknown
-     p1  violation  helmet=missing, vest=worn, mask=unknown
-     p2  compliant  helmet=worn, vest=worn, mask=unknown
-```
-
-Add `--fail-on-violation` to exit with status 1 when something is found, which is handy for scripts
-and batch jobs.
-
-### Run the dashboard
-
-```bash
-ppe-guard serve                      # http://localhost:8000
-```
-
-Open **Settings** and add your cameras (webcam index `0`, a video file path or an `rtsp://` URL),
-choose the required PPE, then press **Start** on the **Live** page.
-
-### Docker
-
-```bash
-docker compose up -d --build         # CPU image, http://localhost:8000
-```
-
-For an NVIDIA GPU, build with `--build-arg TORCH_INDEX=https://download.pytorch.org/whl/cu128` and
-uncomment the `deploy` block in [`docker-compose.yml`](docker-compose.yml). Settings, the database
-and snapshots are kept in `./data`, and model weights in `./models`.
-
-> [!WARNING]
-> The dashboard has no login. It binds to `localhost` by default. If you expose it on a network,
-> put it behind a reverse proxy with authentication (for example Caddy, nginx or Tailscale).
-
-## The dashboard
-
-| Live | Violations | Settings |
-| --- | --- | --- |
-| ![Live view](docs/assets/dashboard-live.png) | ![Violations](docs/assets/dashboard-violations.png) | ![Settings](docs/assets/dashboard-settings.png) |
-
-- **Live**: an annotated stream per camera with every worker's ID and PPE status, and a live
-  event feed.
-- **Violations**: filter by camera, missing item, period, status and review state. Open an
-  entry to see its snapshots, add a note, mark it reviewed or delete it. **Export CSV** downloads
-  the filtered list.
-- **Settings**: required PPE, timing, detection, alerts and cameras. Changes apply to running
-  cameras within a second, except the model, which applies on the next camera start.
-
-### Settings reference
-
-| Setting | Default | Meaning |
-| --- | --- | --- |
-| Required PPE | helmet, vest | Items every worker must wear |
-| `violation_delay` | 2 s | How long an item must look missing before a violation opens |
-| `clear_after` | 3 s | How long a worker must be compliant before the violation closes |
-| `lost_timeout` | 3 s | How long a worker may be out of view before being forgotten |
-| `treat_unseen_as_missing` | off | Strict mode: required items that can't be seen count as missing |
-| `min_overlap` | 0.5 | Share of a PPE box that must lie inside a person box to be assigned |
-| `snapshot_interval` / `max_snapshots` | 10 s / 5 | Evidence frames saved per violation |
-| `confidence` / `iou` | 0.40 / 0.50 | Detector thresholds |
-| `max_fps` | 15 | Processing cap per camera |
-| `webhook_url`, `format`, `cooldown` | none, generic, 60 s | Alerts |
-
-Settings are stored in `data/settings.json`. Change the folder with `--data-dir` or
-`PPE_GUARD_DATA_DIR`.
-
-### API
-
-| Method | Path | Purpose |
-| --- | --- | --- |
-| `GET` | `/api/health`, `/api/stats` | Health and summary counts |
-| `GET` `PUT` | `/api/settings` | Read or replace settings (validated) |
-| `GET` `POST` | `/api/cameras` | List or add cameras |
-| `PUT` `DELETE` | `/api/cameras/{id}` | Edit or remove a camera |
-| `POST` | `/api/cameras/{id}/start`, `/stop` | Control processing |
-| `GET` | `/api/cameras/{id}/stream` | Annotated MJPEG stream |
-| `GET` | `/api/violations` | Filter, sort and page violations |
-| `GET` | `/api/violations/export.csv` | CSV export (same filters) |
-| `GET` `DELETE` | `/api/violations/{id}` | Details with snapshots, or delete |
-| `POST` | `/api/violations/{id}/ack` | Mark reviewed, with an optional note |
-| `WS` | `/ws` | Live frame summaries and violation events |
-
-Interactive API docs are served at `/docs`.
-
-## Model results
-
-Both models were fine-tuned from COCO weights on the
+Fine-tuned for 200 epochs on the
 [Construction Site Safety dataset](https://universe.roboflow.com/roboflow-universe-projects/construction-site-safety)
-(2,605 train images including Roboflow's augmented copies, 114 validation and 82 test images) at 640 px, batch 16, for 200 epochs, on an
-RTX 5060 Ti (16 GB). They were evaluated with `ppe-guard val` at the same settings. The **test**
-split was never used for training or model selection.
+(2,605 training images). Measured on the 82 held-out **test** images, which were never used for
+training or model selection:
 
-| Model | Split | Precision | Recall | mAP50 | mAP50-95 | GPU inference |
-| --- | --- | --- | --- | --- | --- | --- |
-| **ppe-yolo26s** (default) | val | 0.933 | 0.834 | 0.871 | 0.620 | 6.2 ms |
-| | test | 0.940 | 0.765 | 0.822 | **0.574** | |
-| ppe-yolov8s (v1) | val | 0.950 | 0.800 | 0.864 | 0.604 | 5.8 ms |
-| | test | 0.923 | 0.782 | 0.814 | 0.556 | |
+| Model | Precision | Recall | mAP50 | mAP50-95 |
+| --- | --- | --- | --- | --- |
+| **ppe-yolo26s** (default) | 0.940 | 0.765 | 0.822 | **0.574** |
+| ppe-yolov8s (v1) | 0.923 | 0.782 | 0.814 | 0.556 |
 
-YOLO26s is the default: it has the best mAP50-95 on the test split (+0.018) and higher precision, and it is a smaller file. YOLOv8s has slightly higher test recall (0.782 against 0.765), so it can be worth trying if missed detections matter more to you than false alarms (`ppe-guard weights download ppe-yolov8s`, then set **Model** to `ppe-yolov8s` under **Settings → Detection** and restart the camera). The test split is small (82 images), so treat differences of a point or two as close to noise. GPU inference is per image at batch 16 on the RTX 5060 Ti, excluding pre- and post-processing.
-
-**Where the models struggle** (test split, both models): `NO-Hardhat` has the lowest recall of
-the PPE classes, so a bare head is harder to confirm than a helmet. Small or distant `Safety Cone`s
-are often missed. Low light, unusual helmet colours and heavy occlusion all reduce accuracy. Use
-the confidence threshold and `violation_delay` to trade missed violations against false alarms,
-and check a sample of footage from your own site before relying on it.
-
-Training curves, confusion matrices and per-epoch metrics are in
+Bare heads (`NO-Hardhat`) are the hardest class to confirm, and small, distant, dark or occluded
+workers reduce accuracy. Check footage from your own site, and
+[fine-tune](https://voxdroid.github.io/ppe-guard/reference/training/) on it for the best results.
+Per-class numbers, validation results and training curves are in
+[Models and results](https://voxdroid.github.io/ppe-guard/reference/models/) and
 [`training/results/`](training/results/).
 
-## Training
-
-```bash
-pip install -e ".[dataset]"
-ppe-guard dataset download                       # Kaggle mirror of the Roboflow dataset → datasets/css
-ppe-guard train --model yolo26s.pt --epochs 200  # any Ultralytics detector: yolo11s.pt, yolov8m.pt, ...
-ppe-guard val --weights runs/detect/yolo26s-css/weights/best.pt --split test
-ppe-guard export --weights runs/detect/yolo26s-css/weights/best.pt --format onnx   # or engine, openvino, tflite...
-```
-
-To use your own model in the dashboard, set **Settings → Detection → Model** to the `.pt` path. A
-model trained on another PPE dataset works too, as long as its class names include a person class
-and `hardhat`/`helmet`, `vest` or `mask` style names (with `NO-` variants for missing items).
-
-The original exploratory notebook, which produced the v1 YOLOv8s model, is in
-[`training/yolov8-finetuning-for-ppe-detection.ipynb`](training/yolov8-finetuning-for-ppe-detection.ipynb).
+**Capacity**: on an RTX 5060 Ti, one server processed 4 cameras at about 12 fps each, or 8 at
+about 6.7 fps each, with 100,000 violations in the database and the dashboard in use. A CPU alone
+manages about 15 fps in total. See [Performance](https://voxdroid.github.io/ppe-guard/deployment/performance/)
+for the full stress test.
 
 ## Project layout
 
 ```text
 src/ppe_guard/
-  compliance.py   per-worker PPE association, smoothing and violation lifecycle
+  compliance.py   per-worker PPE matching, zones, smoothing and the violation lifecycle
   detector.py     YOLO + tracker wrapper and frame drawing
-  camera.py       one processing thread per camera
-  storage.py      SQLite violations database and snapshots
+  camera.py       one processing thread per camera, snapshots and clips
+  storage.py      SQLite: violations, evidence, worker-time and analytics
+  analysis.py     the Analyze page (uploaded photos and videos)
+  auth.py         optional password login and API tokens
   alerts.py       webhook alerts
-  server/         FastAPI app and the dashboard (plain HTML/JS/CSS, no build step)
+  video.py        browser-playable video writing and clip recording
+  server/         FastAPI app and the dashboard (plain HTML/CSS/JS modules, no build step)
   cli.py          the ppe-guard command
-training/         data.yaml, the original notebook, published results
-tests/            unit and API tests (CPU only, no weights needed)
-docs/             GitHub Pages site and README images
+docs/             documentation site (MkDocs) and the in-browser demo
+training/         dataset config, the original notebook, published results
+tests/            unit, API and browser tests (no GPU or weights needed)
+scripts/          reference-doc generator and the stress test
 ```
 
-## Roadmap
+## Contributing
 
-- Zones: only enforce PPE inside drawn areas, with different rules per zone
-- More PPE: gloves, safety glasses and harnesses (needs more labelled data)
-- Optional login and roles for the dashboard
-- Daily and weekly PDF compliance summaries
-- Edge deployment guides (Jetson, Raspberry Pi with Hailo, OpenVINO)
-
-Ideas and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
+Bug reports, feedback from real sites, docs fixes and code are all welcome. See
+[CONTRIBUTING.md](CONTRIBUTING.md). Ideas on the list: gloves, safety glasses and harness
+detection (needs labelled data), per-camera schedules, and edge deployment guides (Jetson,
+OpenVINO, Hailo).
 
 ## Acknowledgements and licences
 
-- Dataset: [Construction Site Safety](https://universe.roboflow.com/roboflow-universe-projects/construction-site-safety)
+- **Dataset**: [Construction Site Safety](https://universe.roboflow.com/roboflow-universe-projects/construction-site-safety)
   (export v28) from Roboflow Universe, licensed **CC BY 4.0**, mirrored on
   [Kaggle](https://www.kaggle.com/datasets/snehilsanyal/construction-site-safety-image-dataset-roboflow).
-  Its images come from several public Roboflow projects and YouTube videos (see the dataset README).
-- Detection and tracking: [Ultralytics](https://github.com/ultralytics/ultralytics) (YOLOv8,
-  YOLO26, ByteTrack integration).
+  The demo's sample photos come from its test split.
+- **Detection and tracking**: [Ultralytics](https://github.com/ultralytics/ultralytics) (YOLO26,
+  YOLOv8, ByteTrack integration). **Browser demo**: [ONNX Runtime Web](https://onnxruntime.ai/).
 - The training notebook builds on community Kaggle work on YOLOv8 PPE fine-tuning.
 
-PPE Guard's own code is released under the [MIT License](LICENSE). Ultralytics, and therefore
+PPE Guard's own code is released under the [MIT License](LICENSE). Ultralytics, and therefore the
 models trained and run with it, are licensed under **AGPL-3.0** by Ultralytics. Commercial or
 closed-source use may need an [Ultralytics Enterprise licence](https://www.ultralytics.com/license).
 Check your obligations before deploying.

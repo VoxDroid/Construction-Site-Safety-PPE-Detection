@@ -1,0 +1,25 @@
+/* Home page */
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+  gap: 2rem;
+  align-items: center;
+  margin: 1rem 0 2.5rem;
+}
+.hero h1 {
+  font-size: 2.3rem;
+  font-weight: 750;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--md-default-fg-color);
+  margin-bottom: 0.8rem;
+}
+.hero .md-button { margin: 0.3rem 0.4rem 0 0; }
+.hero-shot { border-radius: 12px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25); }
+@media (max-width: 900px) {
+  .hero { grid-template-columns: 1fr; }
+  .hero h1 { font-size: 1.8rem; }
+}
+.md-typeset .grid.cards > ul > li { border-radius: 10px; }
+.md-typeset .grid.cards .lg { color: var(--md-accent-fg-color); }
+.md-typeset img { border-radius: 8px; }

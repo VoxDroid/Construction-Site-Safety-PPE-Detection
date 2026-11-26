@@ -21,7 +21,7 @@ A rewrite that turns the training project into a usable monitoring tool.
   management, and a WebSocket live feed.
 - **Alerts**: webhooks in generic JSON, Slack or Discord format, with a per-camera cooldown.
 - **CSV export** of violations for audits.
-- **YOLO26s model** trained on the same dataset as the v1 YOLOv8s model. Both models are
+- **YOLO26s model** (new default, test mAP50-95 0.574 against 0.556 for v1) trained on the same dataset as the v1 YOLOv8s model. Both models are
   evaluated on the held-out test split.
 - Docker image and compose file (CPU or NVIDIA GPU), GitHub Actions CI, GitHub Pages site,
   issue templates and a contributor guide.

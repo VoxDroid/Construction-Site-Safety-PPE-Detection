@@ -203,12 +203,12 @@ split was never used for training or model selection.
 
 | Model | Split | Precision | Recall | mAP50 | mAP50-95 | GPU inference |
 | --- | --- | --- | --- | --- | --- | --- |
-| **ppe-yolo26s** (default) | val | {{Y26_VAL}} |
-| | test | {{Y26_TEST}} |
-| ppe-yolov8s (v1) | val | 0.950 | 0.800 | 0.864 | 0.604 | {{V8_SPEED}} |
+| **ppe-yolo26s** (default) | val | 0.933 | 0.834 | 0.871 | 0.620 | 6.2 ms |
+| | test | 0.940 | 0.765 | 0.822 | **0.574** | |
+| ppe-yolov8s (v1) | val | 0.950 | 0.800 | 0.864 | 0.604 | 5.8 ms |
 | | test | 0.923 | 0.782 | 0.814 | 0.556 | |
 
-{{RESULTS_NOTE}}
+YOLO26s is the default: it has the best mAP50-95 on the test split (+0.018) and higher precision, and it is a smaller file. YOLOv8s has slightly higher test recall (0.782 against 0.765), so it can be worth trying if missed detections matter more to you than false alarms (`ppe-guard weights download ppe-yolov8s`, then set **Model** to `ppe-yolov8s` under **Settings → Detection** and restart the camera). The test split is small (82 images), so treat differences of a point or two as close to noise. GPU inference is per image at batch 16 on the RTX 5060 Ti, excluding pre- and post-processing.
 
 **Where the models struggle** (test split, both models): `NO-Hardhat` has the lowest recall of
 the PPE classes, so a bare head is harder to confirm than a helmet. Small or distant `Safety Cone`s

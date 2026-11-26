@@ -14,8 +14,9 @@ the violation delay. It stays open while that lasts and closes when the worker i
 | **Video clip** | From **Seconds before** the violation opened until it closes (plus about 1.5 s), capped at **Longest clip**. Annotated, scaled to **Clip width**. Turn clips off in **Settings → Recording**. |
 | **Details** | Camera, worker number, what was missing (or which zone), start, end and duration. |
 
-Clips are saved as H.264 MP4 when the installed OpenCV can encode it, otherwise as VP8 WebM;
-both play in current browsers. If neither encoder is available, clips fall back to MPEG-4 Part 2,
+Clips are saved as H.264 MP4 when the installed OpenCV can encode it (as the Windows wheels can),
+otherwise as VP8 WebM (as with the standard Linux wheels and the Docker image); both play in
+current browsers. If neither encoder is available, clips fall back to MPEG-4 Part 2,
 which browsers can't play but can download. **Settings → System** shows which one your install
 uses.
 

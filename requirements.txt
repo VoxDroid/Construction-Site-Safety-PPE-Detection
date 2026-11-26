@@ -1,7 +1,0 @@
-Flask
-Flask-SocketIO
-opencv-python
-ultralytics
-Pillow
-python-socketio
-eventlet

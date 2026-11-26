@@ -1,0 +1,104 @@
+site_name: PPE Guard
+site_description: Real-time construction site PPE monitoring with YOLO26 - per-worker hard hat, vest and mask checks, zones, alerts, analytics and a web dashboard.
+site_url: https://voxdroid.github.io/ppe-guard/
+repo_url: https://github.com/VoxDroid/ppe-guard
+repo_name: VoxDroid/ppe-guard
+edit_uri: edit/main/docs/
+copyright: MIT License · Model weights derive from Ultralytics YOLO (AGPL-3.0) · Dataset CC BY 4.0
+
+theme:
+  name: material
+  logo: assets/favicon.svg
+  favicon: assets/favicon.svg
+  icon:
+    repo: fontawesome/brands/github
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: amber
+      accent: amber
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: amber
+      accent: amber
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - navigation.indexes
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.action.edit
+    - toc.follow
+
+extra_css:
+  - assets/extra.css
+
+nav:
+  - Home: index.md
+  - Getting started:
+      - Installation: getting-started/installation.md
+      - Quickstart: getting-started/quickstart.md
+      - Live demo: https://voxdroid.github.io/ppe-guard/demo/
+  - User guide:
+      - The dashboard: guide/dashboard.md
+      - Cameras: guide/cameras.md
+      - Zones: guide/zones.md
+      - Violations and evidence: guide/violations.md
+      - Analytics and reports: guide/analytics.md
+      - Analyze files: guide/analyze.md
+      - Alerts: guide/alerts.md
+      - Security: guide/security.md
+      - How detection works: guide/how-it-works.md
+  - Deployment:
+      - Docker: deployment/docker.md
+      - Running in production: deployment/production.md
+      - Performance: deployment/performance.md
+  - Reference:
+      - Command line: reference/cli.md
+      - Configuration: reference/configuration.md
+      - REST API: reference/api.md
+      - Models and results: reference/models.md
+      - Training: reference/training.md
+  - FAQ: faq.md
+  - Changelog: changelog.md
+  - Contributing: contributing.md
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - footnotes
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.snippets:
+      base_path: ["."]
+      check_paths: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+not_in_nav: |
+  /demo/**
+

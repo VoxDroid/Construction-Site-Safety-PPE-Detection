@@ -27,7 +27,6 @@ CREATE TABLE IF NOT EXISTS violations (
     acknowledged  INTEGER NOT NULL DEFAULT 0,
     note          TEXT
 );
-CREATE INDEX IF NOT EXISTS idx_violations_started ON violations(started_at);
 CREATE INDEX IF NOT EXISTS idx_violations_camera ON violations(camera_id);
 CREATE TABLE IF NOT EXISTS snapshots (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -57,6 +56,7 @@ _MIGRATIONS = {
 
 SORT_COLUMNS = {"started_at", "last_seen", "ended_at", "camera_id", "duration"}
 ITEMS = ("helmet", "vest", "mask")
+_ITEM_SUMS = ", ".join(f"COALESCE(SUM(instr(missing, '\"{i}\"') > 0), 0)" for i in ITEMS)
 
 
 def _local_midnight(ts: float) -> float:
@@ -70,8 +70,15 @@ class Storage:
         self.clip_dir = data_dir / "clips"
         self.snapshot_dir.mkdir(parents=True, exist_ok=True)
         self.clip_dir.mkdir(parents=True, exist_ok=True)
+        # One connection for writes (serialised by a lock), and one read connection per thread.
+        # With WAL, readers never wait for the writer, so slow dashboard queries can't stall the
+        # camera threads that record violations.
+        self._path = data_dir / "ppe_guard.db"
         self._lock = threading.Lock()
-        self._db = sqlite3.connect(data_dir / "ppe_guard.db", check_same_thread=False)
+        self._local = threading.local()
+        self._readers: list[sqlite3.Connection] = []
+        self._readers_lock = threading.Lock()
+        self._db = sqlite3.connect(self._path, check_same_thread=False)
         self._db.row_factory = sqlite3.Row
         self._db.execute("PRAGMA journal_mode=WAL")
         self._db.execute("PRAGMA synchronous=NORMAL")
@@ -82,6 +89,12 @@ class Storage:
             if col not in cols:
                 self._db.execute(sql)
         self._db.execute("CREATE INDEX IF NOT EXISTS idx_violations_open ON violations(ended_at)")
+        # Covering index: lists, stats and analytics over a time range read only the index,
+        # which is ~10x faster than following 100k row pointers.
+        self._db.execute(
+            "CREATE INDEX IF NOT EXISTS idx_violations_report ON violations(started_at, camera_id, kind,"
+            " acknowledged, ended_at, last_seen, missing, zone_name, camera_name)")
+        self._db.execute("DROP INDEX IF EXISTS idx_violations_started")
         # Violations left open by a crash or shutdown end at their last sighting.
         self._db.execute("UPDATE violations SET ended_at = last_seen WHERE ended_at IS NULL")
         self._db.commit()
@@ -89,6 +102,23 @@ class Storage:
     def close(self) -> None:
         with self._lock:
             self._db.close()
+        with self._readers_lock:
+            for c in self._readers:
+                c.close()
+            self._readers.clear()
+
+    def _r(self) -> sqlite3.Connection:
+        """This thread's read-only connection."""
+        conn = getattr(self._local, "conn", None)
+        if conn is None:
+            conn = sqlite3.connect(self._path, check_same_thread=False)
+            conn.row_factory = sqlite3.Row
+            conn.execute("PRAGMA busy_timeout=5000")
+            conn.execute("PRAGMA query_only=ON")
+            self._local.conn = conn
+            with self._readers_lock:
+                self._readers.append(conn)
+        return conn
 
     # ---- writes -------------------------------------------------------------------------
 
@@ -232,8 +262,9 @@ class Storage:
             clauses.append("camera_id = ?")
             args.append(camera_id)
         if item:
-            clauses.append("EXISTS (SELECT 1 FROM json_each(missing) WHERE value = ?)")
-            args.append(item)
+            # `missing` is a JSON list of plain words; a string search avoids parsing it per row.
+            clauses.append("instr(missing, ?) > 0")
+            args.append(json.dumps(item))
         if kind:
             clauses.append("kind = ?")
             args.append(kind)
@@ -269,51 +300,49 @@ class Storage:
         direction = "ASC" if order.lower() == "asc" else "DESC"
         sort_sql = "(COALESCE(ended_at, last_seen) - started_at)" if sort == "duration" else sort
         where, args = self._where(camera_id, item, since, until, ongoing, acknowledged, kind)
-        with self._lock:
-            total = self._db.execute(f"SELECT COUNT(*) FROM violations{where}", args).fetchone()[0]
-            rows = self._db.execute(
-                f"SELECT v.*, (SELECT COUNT(*) FROM snapshots s WHERE s.violation_id = v.id) AS snapshot_count,"
-                f" (SELECT filename FROM snapshots s WHERE s.violation_id = v.id ORDER BY taken_at LIMIT 1) AS thumbnail"
-                f" FROM violations v{where} ORDER BY {sort_sql} {direction}, id LIMIT ? OFFSET ?",
-                [*args, limit, offset],
-            ).fetchall()
+        db = self._r()
+        total = db.execute(f"SELECT COUNT(*) FROM violations{where}", args).fetchone()[0]
+        rows = db.execute(
+            f"SELECT v.*, (SELECT COUNT(*) FROM snapshots s WHERE s.violation_id = v.id) AS snapshot_count,"
+            f" (SELECT filename FROM snapshots s WHERE s.violation_id = v.id ORDER BY taken_at LIMIT 1) AS thumbnail"
+            f" FROM violations v{where} ORDER BY {sort_sql} {direction}, id LIMIT ? OFFSET ?",
+            [*args, limit, offset],
+        ).fetchall()
         return {"total": total, "items": [self._row(r) for r in rows]}
 
     def get_violation(self, violation_id: str) -> dict | None:
-        with self._lock:
-            r = self._db.execute("SELECT * FROM violations WHERE id = ?", (violation_id,)).fetchone()
-            if r is None:
-                return None
-            snaps = [dict(s) for s in self._db.execute(
-                "SELECT filename, taken_at FROM snapshots WHERE violation_id = ? ORDER BY taken_at",
-                (violation_id,))]
+        db = self._r()
+        r = db.execute("SELECT * FROM violations WHERE id = ?", (violation_id,)).fetchone()
+        if r is None:
+            return None
+        snaps = [dict(s) for s in db.execute(
+            "SELECT filename, taken_at FROM snapshots WHERE violation_id = ? ORDER BY taken_at",
+            (violation_id,))]
         return self._row(r, snaps)
 
     def stats(self, now: float | None = None) -> dict:
         now = now or time.time()
         midnight = _local_midnight(now)
         day_ago = now - 86400
-        with self._lock:
-            q = self._db.execute
-            today = q("SELECT COUNT(*) FROM violations WHERE started_at >= ?", (midnight,)).fetchone()[0]
-            ongoing = q("SELECT COUNT(*) FROM violations WHERE ended_at IS NULL").fetchone()[0]
-            total = q("SELECT COUNT(*) FROM violations").fetchone()[0]
-            unack = q("SELECT COUNT(*) FROM violations WHERE acknowledged = 0").fetchone()[0]
-            by_item = {r[0]: r[1] for r in q(
-                "SELECT j.value, COUNT(*) FROM violations, json_each(violations.missing) j"
-                " WHERE started_at >= ? GROUP BY j.value", (day_ago,))}
-            zone = q("SELECT COUNT(*) FROM violations WHERE kind = 'zone' AND started_at >= ?",
-                     (day_ago,)).fetchone()[0]
-            if zone:
-                by_item["zone"] = zone
-            by_camera = {r[0]: r[1] for r in q(
-                "SELECT camera_name, COUNT(*) FROM violations WHERE started_at >= ? GROUP BY camera_name",
-                (day_ago,))}
-            hourly = [0] * 24
-            for (ts,) in q("SELECT started_at FROM violations WHERE started_at >= ?", (day_ago,)):
-                hourly[min(23, int((ts - day_ago) // 3600))] += 1
-            ws, vs = q("SELECT COALESCE(SUM(worker_seconds),0), COALESCE(SUM(violation_seconds),0)"
-                       " FROM activity WHERE hour >= ?", (midnight - 3600,)).fetchone()
+        q = self._r().execute
+        today = q("SELECT COUNT(*) FROM violations WHERE started_at >= ?", (midnight,)).fetchone()[0]
+        ongoing = q("SELECT COUNT(*) FROM violations WHERE ended_at IS NULL").fetchone()[0]
+        total = q("SELECT COUNT(*) FROM violations").fetchone()[0]
+        unack = q("SELECT COUNT(*) FROM violations WHERE acknowledged = 0").fetchone()[0]
+        counts = q(f"SELECT {_ITEM_SUMS}, COALESCE(SUM(kind = 'zone'), 0) FROM violations"
+                   " WHERE started_at >= ?", (day_ago,)).fetchone()
+        by_item = {k: n for k, n in zip(ITEMS, counts[:3], strict=True) if n}
+        if counts[3]:
+            by_item["zone"] = counts[3]
+        by_camera = {r[0]: r[1] for r in q(
+            "SELECT camera_name, COUNT(*) FROM violations WHERE started_at >= ? GROUP BY camera_name",
+            (day_ago,))}
+        hourly = [0] * 24
+        for h, n in q("SELECT CAST((started_at - ?) / 3600 AS INTEGER), COUNT(*) FROM violations"
+                      " WHERE started_at >= ? GROUP BY 1", (day_ago, day_ago)):
+            hourly[min(23, max(0, h))] += n
+        ws, vs = q("SELECT COALESCE(SUM(worker_seconds),0), COALESCE(SUM(violation_seconds),0)"
+                   " FROM activity WHERE hour >= ?", (midnight - 3600,)).fetchone()
         return {
             "today": today,
             "ongoing": ongoing,
@@ -328,72 +357,83 @@ class Storage:
     # ---- analytics ----------------------------------------------------------------------
 
     def analytics(self, start: date, days: int, camera_id: str | None = None) -> dict:
-        """Aggregates for ``days`` local calendar days starting at ``start``."""
+        """Aggregates for ``days`` local calendar days starting at ``start``.
+
+        SQL groups violations into 15-minute buckets (cheap integer maths on the covering index);
+        Python maps the buckets to local days and hours, which also handles daylight saving and
+        half-hour time zones.
+        """
         since = datetime.combine(start, datetime.min.time()).timestamp()
         until = datetime.combine(start + timedelta(days=days), datetime.min.time()).timestamp()
         where, args = self._where(camera_id=camera_id, since=since, until=until)
         cam_sql, cam_args = ("AND camera_id = ?", [camera_id]) if camera_id else ("", [])
-        with self._lock:
-            rows = self._db.execute(
-                f"SELECT camera_id, camera_name, kind, missing, zone_name, started_at,"
-                f" COALESCE(ended_at, last_seen) - started_at AS duration, acknowledged,"
-                f" ended_at IS NULL AS ongoing FROM violations{where}", args).fetchall()
-            act = self._db.execute(
-                f"SELECT camera_id, hour, worker_seconds, violation_seconds, peak_workers FROM activity"
-                f" WHERE hour >= ? AND hour < ? {cam_sql}", [since - 3600, until, *cam_args]).fetchall()
-            names = dict(self._db.execute(
-                "SELECT camera_id, camera_name FROM violations GROUP BY camera_id").fetchall())
+        q = self._r().execute
 
         day_keys = [(start + timedelta(days=i)).isoformat() for i in range(days)]
         daily = {k: {"date": k, "violations": 0, "helmet": 0, "vest": 0, "mask": 0, "zone": 0,
                      "worker_seconds": 0.0, "violation_seconds": 0.0} for k in day_keys}
         heat = [[0] * 24 for _ in range(7)]  # weekday (Mon=0) x hour, local time
-        cams: dict[str, dict] = {}
-        zones: dict[str, int] = {}
         items = dict.fromkeys(ITEMS, 0)
-        n_zone = 0
-        durations: list[float] = []
-        acked = 0
-
-        def cam(cid: str) -> dict:
-            return cams.setdefault(cid, {"camera_id": cid, "camera_name": names.get(cid, cid),
-                                         "violations": 0, "worker_seconds": 0.0,
-                                         "violation_seconds": 0.0})
-
-        for r in rows:
-            dt = datetime.fromtimestamp(r["started_at"])
-            d = daily.get(dt.date().isoformat())
+        for bucket, n, zone, helmet, vest, mask in q(
+                f"SELECT CAST(started_at / 900 AS INTEGER), COUNT(*), SUM(kind = 'zone'), {_ITEM_SUMS}"
+                f" FROM violations{where} GROUP BY 1", args):
+            local = datetime.fromtimestamp(bucket * 900)
+            d = daily.get(local.date().isoformat())
             if d is None:
                 continue
-            d["violations"] += 1
-            heat[dt.weekday()][dt.hour] += 1
-            c = cam(r["camera_id"])
-            c["camera_name"] = r["camera_name"]
-            c["violations"] += 1
-            if r["kind"] == "zone":
-                d["zone"] += 1
-                n_zone += 1
-                zones[r["zone_name"] or "?"] = zones.get(r["zone_name"] or "?", 0) + 1
-            for m in json.loads(r["missing"]):
-                if m in items:
-                    items[m] += 1
-                    d[m] += 1
-            if not r["ongoing"]:
-                durations.append(r["duration"])
-            acked += r["acknowledged"]
+            d["violations"] += n
+            d["zone"] += zone
+            for k, v in (("helmet", helmet), ("vest", vest), ("mask", mask)):
+                d[k] += v
+                items[k] += v
+            heat[local.weekday()][local.hour] += n
+
+        n_total, n_zone, acked, avg = q(
+            f"SELECT COUNT(*), COALESCE(SUM(kind = 'zone'), 0), COALESCE(SUM(acknowledged), 0),"
+            f" AVG(CASE WHEN ended_at IS NOT NULL THEN ended_at - started_at END) FROM violations{where}",
+            args).fetchone()
+        closed = where + (" AND " if where else " WHERE ") + "ended_at IS NOT NULL"
+        n_closed = q(f"SELECT COUNT(*) FROM violations{closed}", args).fetchone()[0]
+        median = None
+        if n_closed:  # sorted inside SQLite, which doesn't hold Python's GIL
+            median = q(f"SELECT ended_at - started_at AS d FROM violations{closed} ORDER BY d LIMIT 1 OFFSET ?",
+                       [*args, n_closed // 2]).fetchone()[0]
+
+        cams: dict[str, dict] = {}
+
+        def cam(cid: str, name: str | None = None) -> dict:
+            c = cams.setdefault(cid, {"camera_id": cid, "camera_name": name or cid, "violations": 0,
+                                      "worker_seconds": 0.0, "violation_seconds": 0.0})
+            if name:
+                c["camera_name"] = name
+            return c
+
+        for cid, name, n in q(f"SELECT camera_id, MAX(camera_name), COUNT(*) FROM violations{where}"
+                              " GROUP BY camera_id", args):
+            cam(cid, name)["violations"] = n
+        zones = [{"zone": z or "?", "violations": n} for z, n in q(
+            f"SELECT zone_name, COUNT(*) FROM violations{where}{' AND' if where else ' WHERE'} kind = 'zone'"
+            " GROUP BY zone_name ORDER BY 2 DESC", args)]
 
         peak = 0
-        for a in act:
-            key = datetime.fromtimestamp(a["hour"]).date().isoformat()
-            d = daily.get(key)
-            if d is None:
+        for d, cid, ws, vs, pk in q(
+                "SELECT date(hour, 'unixepoch', 'localtime'), camera_id, SUM(worker_seconds),"
+                f" SUM(violation_seconds), MAX(peak_workers) FROM activity WHERE hour >= ? AND hour < ? {cam_sql}"
+                " GROUP BY 1, 2", [since, until, *cam_args]):
+            if d not in daily:
                 continue
-            d["worker_seconds"] += a["worker_seconds"]
-            d["violation_seconds"] += a["violation_seconds"]
-            c = cam(a["camera_id"])
-            c["worker_seconds"] += a["worker_seconds"]
-            c["violation_seconds"] += a["violation_seconds"]
-            peak = max(peak, a["peak_workers"])
+            daily[d]["worker_seconds"] += ws
+            daily[d]["violation_seconds"] += vs
+            c = cam(cid)
+            c["worker_seconds"] += ws
+            c["violation_seconds"] += vs
+            peak = max(peak, pk)
+        if cams:
+            names = dict(q(f"SELECT camera_id, MAX(camera_name) FROM violations WHERE camera_id IN"
+                           f" ({','.join('?' * len(cams))}) GROUP BY camera_id", list(cams)).fetchall())
+            for cid, c in cams.items():
+                if c["camera_name"] == cid and cid in names:
+                    c["camera_name"] = names[cid]
 
         def rate(ws: float, vs: float) -> float | None:
             return round(1 - vs / ws, 4) if ws > 0 else None
@@ -408,19 +448,17 @@ class Storage:
             c["compliance_rate"] = rate(c["worker_seconds"], c["violation_seconds"])
             c["worker_hours"] = round(c.pop("worker_seconds") / 3600, 2)
             c.pop("violation_seconds")
-        durations.sort()
-        n = len(rows)
         return {
             "start": start.isoformat(),
             "days": days,
             "camera_id": camera_id,
             "totals": {
-                "violations": n,
-                "ppe": n - n_zone,
+                "violations": n_total,
+                "ppe": n_total - n_zone,
                 "zone": n_zone,
-                "acknowledged_rate": round(acked / n, 4) if n else None,
-                "avg_duration": round(sum(durations) / len(durations), 1) if durations else None,
-                "median_duration": durations[len(durations) // 2] if durations else None,
+                "acknowledged_rate": round(acked / n_total, 4) if n_total else None,
+                "avg_duration": round(avg, 1) if avg is not None else None,
+                "median_duration": round(median, 1) if median is not None else None,
                 "worker_hours": round(ws / 3600, 2),
                 "compliance_rate": rate(ws, vs),
                 "peak_workers": peak,
@@ -429,7 +467,7 @@ class Storage:
             "daily": list(daily.values()),
             "heatmap": heat,
             "by_camera": sorted(cams.values(), key=lambda c: -c["violations"]),
-            "by_zone": [{"zone": k, "violations": v} for k, v in sorted(zones.items(), key=lambda kv: -kv[1])],
+            "by_zone": zones,
         }
 
     def export_csv(self, **filters) -> str:

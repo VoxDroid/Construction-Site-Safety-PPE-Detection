@@ -12,16 +12,20 @@ dist/
 htmlcov/
 
 # Large / local-only artefacts (download with the CLI instead)
-datasets/
-models/
-samples/
-runs/
+/datasets/
+/models/
+/samples/
+/runs/
 *.pt
 *.onnx
 *.engine
 
 # Runtime data written by the dashboard (database, snapshots, settings)
-data/
+/data/
+/data-dev/
+
+# Built documentation
+/site/
 
 # Editors / OS
 .idea/

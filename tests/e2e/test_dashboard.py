@@ -142,7 +142,7 @@ def test_live_camera_and_violation_review(page):
     expect(page.locator(f"#rows tr[data-id='{vid}'] .pill.good")).to_have_text(re.compile("Reviewed"))
 
     # a dialog belongs to its page: leaving the page by its address closes it
-    page.goto(page.url.split("#")[0] + f"#/violations/{vid}")
+    page.locator(f"#rows tr[data-id='{vid}'] td").nth(3).click()
     expect(dialog).to_be_visible()
     page.goto(page.url.split("#")[0] + "#/analytics")
     expect(dialog).to_be_hidden()

@@ -25,9 +25,32 @@ jobs:
           pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
           pip install -e ".[dev]"
       - name: Lint
-        run: ruff check src tests
+        run: ruff check src tests scripts
+      - name: Reference docs are up to date
+        if: matrix.python-version == '3.12'
+        run: python scripts/gen_reference.py --check
       - name: Test
-        run: pytest
+        run: pytest --ignore=tests/e2e
+      - name: Video codec in use
+        run: python -c "from ppe_guard.video import video_format; print(video_format())"
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: System libraries for OpenCV
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libgl1 libglib2.0-0
+      - name: Install
+        run: |
+          pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          pip install -e ".[dev,e2e]"
+          playwright install --with-deps chromium
+      - name: Browser tests
+        run: pytest tests/e2e
 
   docker:
     runs-on: ubuntu-latest
@@ -35,3 +58,31 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build image
         run: docker build -t ppe-guard:ci .
+      - name: Run it with a host data folder and a password
+        run: |
+          mkdir -p data
+          docker run -d --name ppe -p 8000:8000 -v "$PWD/data:/data" \
+            -e PPE_GUARD_PASSWORD="ci password 123" ppe-guard:ci
+          for i in $(seq 1 60); do curl -sf localhost:8000/api/health && break; sleep 2; done
+          curl -sf localhost:8000/api/health
+          test "$(curl -s -o /dev/null -w '%{http_code}' localhost:8000/api/settings)" = 401
+          curl -sf -c jar -H 'Content-Type: application/json' \
+            -d '{"password":"ci password 123"}' localhost:8000/api/auth/login
+          curl -sf -b jar -X POST -H 'Content-Type: application/json' \
+            -d '{"id":"cam1","name":"Cam 1","source":"rtsp://example.invalid/stream"}' localhost:8000/api/cameras
+          test -f data/settings.json && grep -q cam1 data/settings.json
+          docker exec ppe grep -Eq '^Uid:[[:space:]]+1000[[:space:]]' /proc/1/status
+      - name: Server log
+        if: always()
+        run: docker logs ppe || true
+
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install "mkdocs-material>=9.5,<10"
+      - name: Build (strict)
+        run: mkdocs build --strict

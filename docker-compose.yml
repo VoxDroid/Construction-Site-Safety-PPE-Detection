@@ -5,8 +5,13 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./data:/data       # settings, violation database, snapshots
-      - ./models:/models   # model weights (downloaded on first start if missing)
+      - ./data:/data       # settings, violation database, snapshots and clips
+      - ./models:/models   # model weights (downloaded on first use if missing)
+      # - ./videos:/videos:ro   # video files to use as camera sources (/videos/site.mp4)
+    environment:
+      # Set a password before exposing the dashboard to your network.
+      # PPE_GUARD_PASSWORD: "change me to a long passphrase"
+      TZ: UTC   # set your time zone (e.g. Europe/London) so reports use local days
     restart: unless-stopped
 
     # USB webcam (Linux): uncomment and add a camera with source "0" in Settings.

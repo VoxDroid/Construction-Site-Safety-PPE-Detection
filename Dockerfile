@@ -12,9 +12,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PPE_GUARD_MODELS_DIR=/models \
     YOLO_CONFIG_DIR=/tmp/ultralytics
 
-# OpenCV runtime libraries
+# OpenCV runtime libraries, and time zone data so reports use local days (set TZ)
 RUN apt-get update \
- && apt-get install -y --no-install-recommends libgl1 libglib2.0-0 \
+ && apt-get install -y --no-install-recommends libgl1 libglib2.0-0 tzdata \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -24,14 +24,17 @@ COPY pyproject.toml README.md LICENSE ./
 COPY src ./src
 RUN pip install .
 
-RUN useradd --create-home --uid 1000 ppe \
+COPY docker/entrypoint.sh /entrypoint.sh
+RUN chmod 755 /entrypoint.sh \
+ && useradd --create-home --uid 1000 ppe \
  && mkdir -p /data /models \
  && chown ppe:ppe /data /models
-USER ppe
 
+# The entrypoint fixes ownership of mounted folders, then runs the server as "ppe".
 VOLUME ["/data", "/models"]
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s \
   CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')" || exit 1
 
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["ppe-guard", "serve", "--host", "0.0.0.0", "--port", "8000"]

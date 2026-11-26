@@ -141,6 +141,13 @@ def test_live_camera_and_violation_review(page):
     # new violations keep arriving, so find the reviewed one by its id
     expect(page.locator(f"#rows tr[data-id='{vid}'] .pill.good")).to_have_text(re.compile("Reviewed"))
 
+    # a dialog belongs to its page: leaving the page by its address closes it
+    page.locator(f"#rows tr[data-id='{vid}'] td").nth(3).click()
+    expect(dialog).to_be_visible()
+    page.goto(page.url.split("#")[0] + "#/analytics")
+    expect(dialog).to_be_hidden()
+    page.locator(".nav a[data-nav=violations]").click()
+
     # filters and bulk actions
     page.select_option("select[name=review]", "yes")
     expect(page.locator(f"#rows tr[data-id='{vid}']")).to_be_visible()

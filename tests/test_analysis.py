@@ -72,6 +72,15 @@ def test_video_job_reports_violations(client, tmp_path):
     assert client.get(f"/api/analyze/jobs/{j['id']}").status_code == 404
 
 
+
+def test_violation_open_at_the_end_closes_on_the_video_clock(client, tmp_path):
+    # bare-headed from 2 s until the last frame at 6 s: the violation is still open when the file ends
+    vid = make_video(tmp_path / "end.avi", frames=60, bare=lambda i: i >= 20)
+    j = wait_done(client, client.post("/api/analyze", files={"file": ("end.avi", vid.read_bytes(), "video/x-msvideo")}).json()["id"])
+    assert j["status"] == "done", j
+    (v,) = j["result"]["violations"]
+    assert v["start"] < v["end"] <= j["result"]["duration"]
+
 def test_rejects_bad_uploads(client):
     assert client.post("/api/analyze", files={"file": ("notes.txt", b"hi", "text/plain")}).status_code == 415
     assert client.post("/api/analyze", files={"file": ("empty.jpg", b"", "image/jpeg")}).status_code == 400

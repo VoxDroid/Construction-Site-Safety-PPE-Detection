@@ -11,7 +11,7 @@
     <div class="bp-wrap bp-cover__grid">
       <div class="bp-cover__copy">
         <div class="bp-meta"><span>PROJECT № PPG-2</span><span>SHEET A-001</span><span>COVER</span></div>
-        <h1 class="bp-title">Every worker.<br>Every helmet.<br><em>Every second.</em></h1>
+        <h1 class="bp-title" id="ppe-guard" tabindex="-1">Every worker.<br>Every helmet.<br><em>Every second.</em></h1>
         <p class="bp-lead">PPE Guard watches your site cameras and checks <b>each worker</b> for a hard hat, a safety vest and a mask. Then it keeps the evidence, tells your team, and measures whether things get better. Open source. Runs on your own hardware.</p>
         <div class="bp-cta">
           <a class="bp-btn bp-btn--hi" href="{{ 'demo/' | url }}"><svg class="bp-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3"/><path d="m16 16-1.9-1.9"/></svg> Try it in your browser</a>
@@ -23,6 +23,7 @@
       <figure class="bp-helmet" aria-label="Hard hat drawn as a wireframe, turning solid">
         <div class="bp-helmet__stage">
           <img class="bp-helmet__wire" src="{{ 'assets/hardhat_wire.webp' | url }}" alt="" width="1117" height="735">
+          <img class="bp-helmet__wire bp-helmet__wire--ink" src="{{ 'assets/hardhat_wire_ink.webp' | url }}" alt="" width="1117" height="735" loading="lazy">
           <img class="bp-helmet__solid" src="{{ 'assets/hardhat_solid.webp' | url }}" alt="3D render of a yellow hard hat" width="1117" height="735">
           <span class="bp-helmet__scan" aria-hidden="true"></span>
           <svg class="bp-helmet__dims" viewBox="0 0 1117 735" aria-hidden="true">
@@ -79,7 +80,7 @@
         <div class="bp-shot bp-shot--marked">
           <img src="{{ 'assets/screenshots/live.png' | url }}" alt="PPE Guard live view" loading="lazy" width="1440" height="900">
           <span class="bp-balloon" style="left:30%;top:26.5%">1</span>
-          <span class="bp-balloon" style="left:31%;top:70%">2</span>
+          <span class="bp-balloon" style="left:62.5%;top:71.5%">2</span>
           <span class="bp-balloon" style="left:46.5%;top:41%">3</span>
           <span class="bp-balloon" style="left:79%;top:47%">4</span>
           <span class="bp-balloon" style="left:9%;top:16%">5</span>
@@ -210,7 +211,7 @@
 
   <!-- ===== Caution =========================================================================== -->
   <section class="bp-caution">
-    <div class="bp-tape bp-tape--a" aria-hidden="true"><span>CAUTION · LIVE DEMO AHEAD · CAUTION · LIVE DEMO AHEAD · CAUTION · LIVE DEMO AHEAD · CAUTION · LIVE DEMO AHEAD · CAUTION · LIVE DEMO AHEAD · </span></div>
+    <div class="bp-tape bp-tape--a" aria-hidden="true"><div class="bp-tape__track"><span>CAUTION · LIVE DEMO AHEAD · CAUTION · LIVE DEMO AHEAD · CAUTION · LIVE DEMO AHEAD · CAUTION · LIVE DEMO AHEAD · CAUTION · LIVE DEMO AHEAD · CAUTION · LIVE DEMO AHEAD · CAUTION · LIVE DEMO AHEAD · CAUTION · LIVE DEMO AHEAD · CAUTION · LIVE DEMO AHEAD · CAUTION · LIVE DEMO AHEAD · CAUTION · LIVE DEMO AHEAD · CAUTION · LIVE DEMO AHEAD · CAUTION · LIVE DEMO AHEAD · CAUTION · LIVE DEMO AHEAD · CAUTION · LIVE DEMO AHEAD · CAUTION · LIVE DEMO AHEAD · </span><span>CAUTION · LIVE DEMO AHEAD · CAUTION · LIVE DEMO AHEAD · CAUTION · LIVE DEMO AHEAD · CAUTION · LIVE DEMO AHEAD · CAUTION · LIVE DEMO AHEAD · CAUTION · LIVE DEMO AHEAD · CAUTION · LIVE DEMO AHEAD · CAUTION · LIVE DEMO AHEAD · CAUTION · LIVE DEMO AHEAD · CAUTION · LIVE DEMO AHEAD · CAUTION · LIVE DEMO AHEAD · CAUTION · LIVE DEMO AHEAD · CAUTION · LIVE DEMO AHEAD · CAUTION · LIVE DEMO AHEAD · CAUTION · LIVE DEMO AHEAD · CAUTION · LIVE DEMO AHEAD · </span></div></div>
     <div class="bp-wrap bp-caution__inner">
       <h2>See it on your own photos</h2>
       <p>The browser demo runs the model on your device. Nothing is uploaded.</p>
@@ -219,7 +220,7 @@
         <a class="bp-btn" href="https://github.com/VoxDroid/ppe-guard"><svg class="bp-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg> Star on GitHub</a>
       </div>
     </div>
-    <div class="bp-tape bp-tape--b" aria-hidden="true"><span>PPE REQUIRED BEYOND THIS POINT · PPE REQUIRED BEYOND THIS POINT · PPE REQUIRED BEYOND THIS POINT · PPE REQUIRED BEYOND THIS POINT · PPE REQUIRED BEYOND THIS POINT · </span></div>
+    <div class="bp-tape bp-tape--b" aria-hidden="true"><div class="bp-tape__track"><span>PPE REQUIRED BEYOND THIS POINT · PPE REQUIRED BEYOND THIS POINT · PPE REQUIRED BEYOND THIS POINT · PPE REQUIRED BEYOND THIS POINT · PPE REQUIRED BEYOND THIS POINT · PPE REQUIRED BEYOND THIS POINT · PPE REQUIRED BEYOND THIS POINT · PPE REQUIRED BEYOND THIS POINT · PPE REQUIRED BEYOND THIS POINT · PPE REQUIRED BEYOND THIS POINT · PPE REQUIRED BEYOND THIS POINT · PPE REQUIRED BEYOND THIS POINT · PPE REQUIRED BEYOND THIS POINT · PPE REQUIRED BEYOND THIS POINT · PPE REQUIRED BEYOND THIS POINT · PPE REQUIRED BEYOND THIS POINT · </span><span>PPE REQUIRED BEYOND THIS POINT · PPE REQUIRED BEYOND THIS POINT · PPE REQUIRED BEYOND THIS POINT · PPE REQUIRED BEYOND THIS POINT · PPE REQUIRED BEYOND THIS POINT · PPE REQUIRED BEYOND THIS POINT · PPE REQUIRED BEYOND THIS POINT · PPE REQUIRED BEYOND THIS POINT · PPE REQUIRED BEYOND THIS POINT · PPE REQUIRED BEYOND THIS POINT · PPE REQUIRED BEYOND THIS POINT · PPE REQUIRED BEYOND THIS POINT · PPE REQUIRED BEYOND THIS POINT · PPE REQUIRED BEYOND THIS POINT · PPE REQUIRED BEYOND THIS POINT · PPE REQUIRED BEYOND THIS POINT · </span></div></div>
   </section>
 
   <p class="bp-wrap bp-fine">PPE Guard helps people notice problems sooner. It is not a certified safety system and can miss violations or raise false ones; keep your normal supervision in place. Photo: Construction Site Safety dataset (Roboflow), CC BY 4.0. Hard hat: rendered in Blender for this site.</p>

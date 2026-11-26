@@ -14,7 +14,8 @@ the violation delay. It stays open while that lasts and closes when the worker i
 | **Video clip** | From **Seconds before** the violation opened until it closes (plus about 1.5 s), capped at **Longest clip**. Annotated, scaled to **Clip width**. Turn clips off in **Settings → Recording**. |
 | **Details** | Camera, worker number, what was missing (or which zone), start, end and duration. |
 
-Clips are saved as H.264 MP4 when the installed OpenCV can encode it (as the Windows wheels can),
+Clips are saved as H.264 MP4 when the installed OpenCV can encode it (on Windows through the
+built-in Media Foundation encoder),
 otherwise as VP8 WebM (as with the standard Linux wheels and the Docker image); both play in
 current browsers. If neither encoder is available, clips fall back to MPEG-4 Part 2,
 which browsers can't play but can download. **Settings → System** shows which one your install
@@ -47,6 +48,9 @@ violation:
 id,type,camera_id,camera_name,worker,missing,zone,started,ended,duration_s,acknowledged,note,snapshots,clip
 8e3da6d2eb4f,ppe,gate,Main gate,t14,helmet|vest,,2026-11-26T13:36:02,2026-11-26T13:36:20,18.0,True,Hard hat issued,3,8e3da6d2eb4f.mp4
 ```
+
+Text people typed (notes, camera and zone names) that starts with `=`, `+`, `-` or `@` gets a
+leading `'`, so a spreadsheet shows it as text instead of running it as a formula.
 
 For a formatted summary, use [Reports](analytics.md#reports).
 

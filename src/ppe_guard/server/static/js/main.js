@@ -1,5 +1,5 @@
 // App shell: routing, live WebSocket, theme and the sidebar.
-import { $, $$, api, errorToast } from "./util.js";
+import { $, $$, api, closeDialog, errorToast } from "./util.js";
 import { bus, loadSettings, refreshBadge, state } from "./store.js";
 import * as live from "./views/live.js";
 import * as camera from "./views/camera.js";
@@ -86,6 +86,7 @@ async function route() {
   const params = path.match(re).slice(1);
   $$(".nav a").forEach((a) => a.classList.toggle("active", a.dataset.nav === nav));
   closeMenu();
+  closeDialog(); // a dialog belongs to the page that opened it (back button, links in toasts)
   const token = ++navToken;
   if (unmount) { try { unmount(); } catch (e) { console.error(e); } unmount = null; }
   // A fresh container per page, so listeners from the previous page go away with it.

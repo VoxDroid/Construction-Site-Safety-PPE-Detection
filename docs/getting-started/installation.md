@@ -58,7 +58,7 @@ We recommend a virtual environment so PPE Guard's dependencies don't clash with 
 
 ```console
 $ ppe-guard doctor
-ppe-guard   2.0.0
+ppe-guard   2.0.1
 python      3.12.10 (Windows AMD64)
 torch       2.11.0+cu128
 cuda:0      NVIDIA GeForce RTX 5060 Ti (15.9 GB)

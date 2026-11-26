@@ -388,9 +388,13 @@ class ComplianceEngine:
         a, self._activity = self._activity, Activity()
         return a
 
-    def reset(self) -> list[ViolationEvent]:
-        """Forget all workers, closing any open violations."""
-        now = self._clock()
+    def reset(self, now: float | None = None) -> list[ViolationEvent]:
+        """Forget all workers, closing any open violations at ``now`` (default: the clock).
+
+        Pass the stream's own time when ``update`` was fed one (a video file), or open
+        violations end at the wall-clock time instead.
+        """
+        now = self._clock() if now is None else now
         events = []
         for w in self._workers.values():
             events += self._close_all(w, now)

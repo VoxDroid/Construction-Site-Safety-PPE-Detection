@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ppe-guard"
-version = "2.0.0"
+version = "2.0.1"
 description = "Real-time PPE compliance monitoring for construction sites: YOLO detection, per-worker tracking, violation logging and alerts."
 readme = "README.md"
 license = "MIT"

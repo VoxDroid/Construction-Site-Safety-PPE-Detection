@@ -3,7 +3,18 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="dark">
+  <meta name="color-scheme" content="dark light">
+  <script>
+    // Use the theme picked on the docs site (Material keeps it per site), else the system's.
+    (function () {
+      var light = matchMedia("(prefers-color-scheme: light)").matches;
+      try {
+        var p = JSON.parse(localStorage.getItem(new URL("..", location.href).pathname + ".__palette"));
+        if (p && p.color && p.color.scheme) light = p.color.scheme === "default";
+      } catch (e) { /* storage blocked: keep the system theme */ }
+      document.documentElement.dataset.theme = light ? "light" : "dark";
+    })();
+  </script>
   <title>PPE Guard live demo</title>
   <meta name="description" content="Try the PPE Guard hard hat and safety vest model in your browser. Nothing is uploaded.">
   <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
@@ -22,20 +33,21 @@
       --text: var(--ink); --text-2: var(--ink-2); --border: var(--soft); --border-strong: var(--line);
       --surface: rgba(6, 26, 51, .8); --surface-2: rgba(16, 46, 82, .6); --surface-3: rgba(120, 170, 235, .14);
       --good-text: #66eaa6; --good-soft: rgba(63, 220, 138, .13); --bad-text: #ff8378; --bad-soft: rgba(255, 85, 71, .15);
+      --grid-a: rgba(150,195,255,.06); --grid-b: rgba(150,195,255,.13); --strong: #fff; --panel: rgba(6,26,51,.6); --shadow: rgba(2,10,22,.7);
       --stencil: "Stencil", Impact, sans-serif; --cond: "Plex Cond", sans-serif; --mono: "Plex Mono", monospace; --hand: "Hand", cursive;
     }
     * { box-sizing: border-box; }
     body { margin: 0; color: var(--ink); font: 15px/1.55 "Plex", system-ui, sans-serif; background-color: var(--bg);
-      background-image: linear-gradient(rgba(150,195,255,.13) 1px, transparent 1px), linear-gradient(90deg, rgba(150,195,255,.13) 1px, transparent 1px),
-        linear-gradient(rgba(150,195,255,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(150,195,255,.06) 1px, transparent 1px);
+      background-image: linear-gradient(var(--grid-b) 1px, transparent 1px), linear-gradient(90deg, var(--grid-b) 1px, transparent 1px),
+        linear-gradient(var(--grid-a) 1px, transparent 1px), linear-gradient(90deg, var(--grid-a) 1px, transparent 1px);
       background-size: 96px 96px, 96px 96px, 16px 16px, 16px 16px; }
     a { color: inherit; }
-    header.top { display: flex; align-items: center; gap: 12px; padding: 12px 24px; background: var(--deep); border-bottom: 3px double rgba(205,225,255,.3); }
+    header.top { display: flex; align-items: center; gap: 12px; padding: 12px 24px; background: var(--deep); color: #eaf3ff; border-bottom: 3px double rgba(205,225,255,.3); }
     header.top .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; font: 800 24px var(--stencil); letter-spacing: .05em; text-transform: uppercase; }
     header.top .brand b { color: var(--hi); font-weight: 800; }
     header.top .brand img { border-radius: 5px; box-shadow: 0 0 0 1px rgba(205,225,255,.3); }
     header.top nav { margin-left: auto; display: flex; gap: 22px; font: 700 13px var(--cond); letter-spacing: .1em; text-transform: uppercase; }
-    header.top nav a { text-decoration: none; color: var(--ink-2); }
+    header.top nav a { text-decoration: none; color: #a9c3e6; }
     header.top nav a:hover { color: var(--hi); }
     main { max-width: 1220px; margin: 0 auto; padding: 34px 24px 60px; }
     .sheet { font: 500 11px var(--mono); letter-spacing: .14em; color: var(--muted); display: flex; }
@@ -44,22 +56,22 @@
     h1 { font: 820 clamp(44px, 6vw, 84px)/.9 var(--stencil); text-transform: uppercase; letter-spacing: .02em; margin: 18px 0 14px; }
     h1 em { font-style: normal; color: var(--hi); }
     .lead { color: var(--ink-2); margin: 0 0 8px; max-width: 760px; font-size: 16.5px; }
-    .lead b { color: #fff; }
+    .lead b { color: var(--strong); }
     .red { font: 21px var(--hand); color: var(--red); transform: rotate(-1.5deg); display: inline-block; margin: 4px 0 24px; }
     .layout { display: grid; grid-template-columns: minmax(0, 1fr) 350px; gap: 22px; align-items: start; }
     @media (max-width: 960px) { .layout { grid-template-columns: 1fr; } }
     .card { position: relative; background: var(--surface); border: 1.5px solid var(--line); }
     .pad { padding: 16px 18px; }
-    .stage { position: relative; background: #020a14; border: 1.5px solid var(--line); min-height: 320px; display: grid; place-items: center; box-shadow: 10px 10px 0 rgba(2,10,22,.45); }
+    .stage { position: relative; background: #020a14; border: 1.5px solid var(--line); min-height: 320px; display: grid; place-items: center; box-shadow: 10px 10px 0 var(--shadow); }
     .stage canvas { width: 100%; height: auto; display: block; }
     .stage .msg[hidden], .bar[hidden] { display: none; }
     .stage .msg { color: var(--ink-2); text-align: center; padding: 24px; position: absolute; inset: 0; display: grid; place-content: center; gap: 12px; font: 500 12px var(--mono); letter-spacing: .1em; text-transform: uppercase; }
     .bar { height: 10px; width: 280px; border: 1px solid var(--line); overflow: hidden; margin: 0 auto; }
     .bar i { display: block; height: 100%; width: 0; background: repeating-linear-gradient(-45deg, #ffcc00 0 6px, #111 6px 12px); transition: width .2s; }
     .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-    .btn { display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 18px; border: 1.5px solid var(--line); background: rgba(6,26,51,.6); color: var(--ink); font: 700 14px var(--cond); letter-spacing: .1em; text-transform: uppercase; cursor: pointer; text-decoration: none; transition: transform .1s, box-shadow .12s; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 18px; border: 1.5px solid var(--line); background: var(--panel); color: var(--ink); font: 700 14px var(--cond); letter-spacing: .1em; text-transform: uppercase; cursor: pointer; text-decoration: none; transition: transform .1s, box-shadow .12s; }
     .btn:hover { transform: translate(-2px,-2px); box-shadow: 4px 4px 0 rgba(205,225,255,.25); border-color: var(--ink); }
-    .btn.primary { background: var(--hi); border-color: #141000; color: #141000; box-shadow: 5px 5px 0 rgba(2,10,22,.7); }
+    .btn.primary { background: var(--hi); border-color: #141000; color: #141000; box-shadow: 5px 5px 0 var(--shadow); }
     .btn:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
     .samples { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 12px; }
     .samples button { padding: 0; border: 1.5px solid var(--soft); cursor: pointer; background: none; aspect-ratio: 1; }
@@ -84,6 +96,21 @@
     .note { font-size: 12.5px; color: var(--muted); margin-top: 22px; }
     .drop-hint { border: 2px dashed var(--line); padding: 14px; text-align: center; color: var(--ink-2); font: 700 12px var(--cond); letter-spacing: .1em; text-transform: uppercase; cursor: pointer; }
     .drop-hint.over { border-color: var(--hi); background: rgba(255,204,0,.12); }
+    #theme { margin-left: 8px; width: 36px; height: 36px; display: grid; place-items: center; background: none; border: 1px solid rgba(205,225,255,.3); color: #eaf3ff; cursor: pointer; }
+    #theme:hover { border-color: var(--hi); color: var(--hi); }
+    #theme svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    :root[data-theme="light"] #theme .moon, :root:not([data-theme="light"]) #theme .sun { display: none; }
+    /* drafting vellum, as on the docs pages in the light scheme */
+    :root[data-theme="light"] {
+      color-scheme: light;
+      --bg: #f1eee4; --ink: #10284a; --ink-2: #3b5477; --muted: #6f84a3;
+      --line: rgba(18,42,78,.42); --soft: rgba(18,42,78,.16); --red: #d3261a; --green: #138a4c;
+      --surface: rgba(252,251,246,.88); --surface-2: rgba(255,255,255,.7); --surface-3: rgba(16,40,74,.06);
+      --good-text: #0f7a43; --good-soft: rgba(19,138,76,.1); --bad-text: #b8231a; --bad-soft: rgba(211,38,26,.08);
+      --grid-a: rgba(34,84,160,.075); --grid-b: rgba(34,84,160,.16); --strong: #0a1e3a; --panel: rgba(252,251,246,.85); --shadow: rgba(16,40,74,.85);
+    }
+    :root[data-theme="light"] h1 em { color: #0a1e3a; background: linear-gradient(transparent 58%, rgba(255,204,0,.85) 58%, rgba(255,204,0,.85) 92%, transparent 92%); }
+    :root[data-theme="light"] .verdict.bad { background: repeating-linear-gradient(-45deg, rgba(211,38,26,.1) 0 2px, transparent 2px 7px); }
     @media (max-width: 600px) { header.top nav { display: none; } main { padding: 22px 16px 48px; } }
   </style>
 </head>
@@ -91,6 +118,10 @@
   <header class="top">
     <a class="brand" href="../"><img src="../assets/favicon.svg" width="30" height="30" alt="">PPE<b>GUARD</b></a>
     <nav><a href="../">Docs</a><a href="../getting-started/quickstart/">Install</a><a href="https://github.com/VoxDroid/ppe-guard">GitHub</a></nav>
+    <button id="theme" type="button" aria-label="Switch between blueprint and vellum">
+      <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+    </button>
   </header>
   <main>
     <div class="sheet"><span>SHEET D-001</span><span>FIELD TEST</span></div>
@@ -140,6 +171,18 @@
     <p class="note">Detections can be wrong: the model sees single frames here, without the smoothing over time that the full app uses to avoid false alarms. Model weights are derived from Ultralytics YOLO (AGPL-3.0).</p>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/ort.min.js"></script>
+  <script>
+    document.getElementById("theme").addEventListener("click", function () {
+      var light = document.documentElement.dataset.theme !== "light";
+      document.documentElement.dataset.theme = light ? "light" : "dark";
+      try {
+        localStorage.setItem(new URL("..", location.href).pathname + ".__palette", JSON.stringify({
+          index: light ? 1 : 0,
+          color: { media: light ? "(prefers-color-scheme: light)" : "(prefers-color-scheme: dark)",
+                   scheme: light ? "default" : "slate", primary: "custom", accent: "custom" } }));
+      } catch (e) { /* storage blocked: the choice lasts for this page only */ }
+    });
+  </script>
   <script type="module" src="demo.js"></script>
 </body>
 </html>

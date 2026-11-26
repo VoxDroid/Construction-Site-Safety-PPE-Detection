@@ -307,7 +307,7 @@ class AnalysisManager:
             cap.release()
             if writer is not None:
                 writer.release()
-        record(engine.reset(), None, n / fps)
+        record(engine.reset(now=n / fps), None, n / fps)
         act = engine.take_activity()
         with contextlib.suppress(OSError):
             src.unlink()

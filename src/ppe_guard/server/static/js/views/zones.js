@@ -1,5 +1,5 @@
 // Zone editor: draw PPE zones and no-entry zones on a camera image.
-import { $, $$, api, errorToast, html, icon, ITEM_LABEL, raw, render, toast } from "../util.js";
+import { $, $$, api, errorToast, esc, html, icon, ITEM_LABEL, raw, render, toast } from "../util.js";
 
 const W = 1000; // SVG units across the image; height follows the aspect ratio
 
@@ -53,7 +53,10 @@ export async function mount(main, [id]) {
     setHint();
     drawSvg();
   };
-  img.onerror = () => { $("#hint", main).textContent = "Could not read a frame from this camera. Check the source in Settings."; };
+  img.onerror = () => {
+    $("#canvas", main).style.display = "none"; // no broken-image box
+    $("#hint", main).textContent = "Could not read a frame from this camera. Check the source in Settings.";
+  };
   img.src = `/api/cameras/${cam.id}/still.jpg?ts=${Date.now()}`;
 
   const setDirty = (v = true) => { dirty = v; $("#save", main).disabled = !dirty; };
@@ -75,7 +78,7 @@ export async function mount(main, [id]) {
       const cls = `${z.kind} ${i === selected ? "selected" : ""} ${z.enabled ? "" : "disabled"}`;
       s += `<polygon class="${cls}" data-i="${i}" points="${z.points.map(P).join(" ")}"></polygon>`;
       const [cx, cy] = z.points.reduce(([a, b], [x, y]) => [a + x / z.points.length, b + y / z.points.length], [0, 0]);
-      s += `<text x="${cx * W}" y="${cy * H}" text-anchor="middle">${z.name.replace(/</g, "&lt;")}${z.kind === "restricted" ? " (no entry)" : ""}</text>`;
+      s += `<text x="${cx * W}" y="${cy * H}" text-anchor="middle">${esc(z.name)}${z.kind === "restricted" ? " (no entry)" : ""}</text>`;
     });
     if (selected >= 0 && zones[selected] && !drawing) {
       zones[selected].points.forEach((p, j) => {
@@ -120,7 +123,7 @@ export async function mount(main, [id]) {
           <button class="btn sm danger" id="z-delete">${icon("trash", "ic-sm")}Delete</button></div>
       </div>`);
     const ed = $("#editor", main);
-    $("#z-name", ed).addEventListener("input", (e) => { z.name = e.target.value || "Zone"; setDirty(); drawSvg(); drawList(); });
+    $("#z-name", ed).addEventListener("input", (e) => { z.name = e.target.value.trim() || "Zone"; setDirty(); drawSvg(); drawList(); });
     $("#z-kind", ed).addEventListener("change", (e) => { z.kind = e.target.value; if (z.kind === "restricted") z.required_ppe = null; setDirty(); refresh(); });
     $("#z-enabled", ed).addEventListener("change", (e) => { z.enabled = e.target.checked; setDirty(); drawSvg(); drawList(); });
     $("#z-custom", ed)?.addEventListener("change", (e) => {

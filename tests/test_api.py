@@ -49,6 +49,12 @@ def test_settings_roundtrip_and_validation(client):
     s["detection"]["confidence"] = 0.4
     s["alerts"]["webhook_url"] = "file:///etc/passwd"
     assert client.put("/api/settings", json=s).status_code == 422
+    s["alerts"]["webhook_url"] = ""
+
+    s["general"]["site_name"] = "   "  # only spaces is not a name
+    assert client.put("/api/settings", json=s).status_code == 422
+    s["general"]["site_name"] = "  North Yard  "
+    assert client.put("/api/settings", json=s).json()["general"]["site_name"] == "North Yard"
 
 
 def test_settings_persist_to_disk(tmp_path):

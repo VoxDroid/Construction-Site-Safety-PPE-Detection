@@ -5,8 +5,8 @@ Thanks for helping make construction sites safer. Bug reports, dataset ideas, do
 ## Development setup
 
 ```bash
-git clone https://github.com/VoxDroid/Construction-Site-Safety-PPE-Detection.git
-cd Construction-Site-Safety-PPE-Detection
+git clone https://github.com/VoxDroid/ppe-guard.git
+cd ppe-guard
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 
 # Pick the PyTorch build for your machine first (https://pytorch.org/get-started/locally/), e.g.

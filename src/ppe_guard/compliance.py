@@ -12,6 +12,8 @@ into a verdict *per worker*:
    ``violation_delay`` seconds, so a single bad frame never raises an alert.
 3. **Event lifecycle**: an open violation is updated while it lasts and closed once the
    worker has been compliant for ``clear_after`` seconds or has left the frame.
+4. **Zones** (optional, per camera): PPE can be required only inside some areas, and
+   restricted areas raise a violation when anyone stays inside them.
 
 Everything here is plain Python with no model dependency, so it can be unit-tested.
 """
@@ -25,7 +27,8 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from enum import Enum
 
-from ppe_guard.config import ComplianceSettings
+from ppe_guard.config import ComplianceSettings, RequiredPPE, Zone
+from ppe_guard.geometry import foot_point, point_in_polygon
 
 
 class PPEItem(str, Enum):
@@ -45,6 +48,7 @@ class WorkerState(str, Enum):
     PENDING = "pending"  # something looks missing, waiting out the delay
     VIOLATION = "violation"
     UNKNOWN = "unknown"  # required items not visible yet
+    UNMONITORED = "unmonitored"  # outside every PPE zone, so nothing is required
 
 
 def _norm(name: str) -> str:
@@ -192,14 +196,20 @@ class Violation:
     started_at: float
     last_seen: float
     ended_at: float | None = None
+    kind: str = "ppe"  # "ppe" (missing equipment) or "zone" (restricted zone entered)
+    zone_id: str | None = None
+    zone_name: str | None = None
     snapshots: int = 0
     last_snapshot_at: float = 0.0
 
     def to_dict(self) -> dict:
         return {
             "id": self.id,
+            "kind": self.kind,
             "worker_key": self.worker_key,
             "missing": sorted(i.value for i in self.missing),
+            "zone_id": self.zone_id,
+            "zone_name": self.zone_name,
             "started_at": self.started_at,
             "last_seen": self.last_seen,
             "ended_at": self.ended_at,
@@ -246,6 +256,10 @@ class _Worker:
     last_items: dict[PPEItem, ItemStatus] = field(default_factory=dict)
     compliant_since: float | None = None
     violation: Violation | None = None
+    # restricted zones
+    restricted_since: float | None = None
+    outside_since: float | None = None
+    intrusion: Violation | None = None
 
 
 @dataclass
@@ -259,6 +273,9 @@ class WorkerView:
     missing: list[PPEItem]
     violation_id: str | None
     synthetic: bool
+    required: list[PPEItem] = field(default_factory=list)
+    zones: list[str] = field(default_factory=list)  # names of the zones the worker stands in
+    intrusion: str | None = None  # restricted zone name, while a zone violation is open
 
     def to_dict(self) -> dict:
         return {
@@ -266,9 +283,12 @@ class WorkerView:
             "box": [round(v, 1) for v in self.box],
             "state": self.state.value,
             "items": {k.value: v.value for k, v in self.items.items()},
+            "required": [r.value for r in self.required],
             "missing": [m.value for m in self.missing],
             "violation_id": self.violation_id,
             "synthetic": self.synthetic,
+            "zones": self.zones,
+            "intrusion": self.intrusion,
         }
 
 
@@ -280,6 +300,10 @@ class FrameResult:
     @property
     def violating(self) -> bool:
         return any(w.state is WorkerState.VIOLATION for w in self.workers)
+
+
+def required_items(required: RequiredPPE) -> list[PPEItem]:
+    return [PPEItem(k) for k, v in required.model_dump().items() if v]
 
 
 def evaluate_still(
@@ -299,7 +323,8 @@ def evaluate_still(
         unknown = any(ob.items[i] is ItemStatus.UNKNOWN for i in required)
         state = (WorkerState.VIOLATION if missing
                  else WorkerState.UNKNOWN if unknown else WorkerState.COMPLIANT)
-        views.append(WorkerView(ob.key, ob.box, state, ob.items, missing, None, ob.synthetic))
+        views.append(WorkerView(ob.key, ob.box, state, ob.items, missing, None, ob.synthetic,
+                                required=list(required)))
     return FrameResult(views, [])
 
 
@@ -308,36 +333,106 @@ def evaluate_still(
 _OPEN_RATIO = 0.6
 # The worker counts as compliant again once the share drops below this.
 _CLEAR_RATIO = 0.25
+# Longest gap between two frames that still counts as continuous observation time.
+_MAX_DT = 1.0
+
+
+@dataclass
+class Activity:
+    """Worker-time seen by one engine since the last :meth:`ComplianceEngine.take_activity`."""
+
+    worker_seconds: float = 0.0  # time workers were monitored
+    violation_seconds: float = 0.0  # part of it spent with an open violation
+    peak_workers: int = 0
 
 
 class ComplianceEngine:
     """Stateful per-worker compliance tracker for one video stream."""
 
-    def __init__(self, settings: ComplianceSettings | None = None, clock=time.time) -> None:
+    def __init__(
+        self,
+        settings: ComplianceSettings | None = None,
+        clock=time.time,
+        zones: Sequence[Zone] = (),
+    ) -> None:
         self.settings = settings or ComplianceSettings()
         self._clock = clock
         self._workers: dict[str, _Worker] = {}
+        self._zones: list[Zone] = []
+        self._last_update: float | None = None
+        self._activity = Activity()
+        self.set_zones(zones)
 
     @property
     def required(self) -> list[PPEItem]:
-        return [PPEItem(k) for k, v in self.settings.required_ppe.model_dump().items() if v]
+        return required_items(self.settings.required_ppe)
+
+    @property
+    def zones(self) -> list[Zone]:
+        return self._zones
 
     def update_settings(self, settings: ComplianceSettings) -> None:
         self.settings = settings
 
+    def set_zones(self, zones: Sequence[Zone]) -> None:
+        self._zones = [z for z in zones if z.enabled]
+
+    def open_violations(self) -> list[Violation]:
+        out = []
+        for w in self._workers.values():
+            out += [v for v in (w.violation, w.intrusion) if v is not None]
+        return out
+
+    def take_activity(self) -> Activity:
+        """Return the worker-time accumulated since the last call and start a new count."""
+        a, self._activity = self._activity, Activity()
+        return a
+
     def reset(self) -> list[ViolationEvent]:
         """Forget all workers, closing any open violations."""
         now = self._clock()
-        events = [self._close(w, now) for w in self._workers.values() if w.violation]
+        events = []
+        for w in self._workers.values():
+            events += self._close_all(w, now)
         self._workers.clear()
+        self._last_update = None
         return events
 
-    def update(self, detections: Iterable[Detection], now: float | None = None) -> FrameResult:
+    # ---- zones --------------------------------------------------------------------------
+
+    def _zones_at(self, box: Box, frame_size: tuple[int, int] | None) -> list[Zone]:
+        if not self._zones or frame_size is None:
+            return []
+        x, y = foot_point(box, frame_size)
+        return [z for z in self._zones if point_in_polygon(x, y, z.points)]
+
+    def _required_for(self, inside: list[Zone]) -> list[PPEItem] | None:
+        """Items required for a worker standing in ``inside``; ``None`` = not monitored."""
+        if not any(z.kind == "ppe" for z in self._zones):
+            return self.required
+        here = [z for z in inside if z.kind == "ppe"]
+        if not here:
+            return None
+        items: set[PPEItem] = set()
+        for z in here:
+            items |= set(required_items(z.required_ppe) if z.required_ppe else self.required)
+        return [i for i in PPEItem if i in items]
+
+    # ---- main loop ----------------------------------------------------------------------
+
+    def update(
+        self,
+        detections: Iterable[Detection],
+        now: float | None = None,
+        frame_size: tuple[int, int] | None = None,
+    ) -> FrameResult:
+        """Process one frame. ``frame_size`` (width, height) is needed for zones."""
         now = self._clock() if now is None else now
         s = self.settings
-        required = self.required
         events: list[ViolationEvent] = []
         views: list[WorkerView] = []
+        dt = 0.0 if self._last_update is None else min(max(now - self._last_update, 0.0), _MAX_DT)
+        self._last_update = now
 
         for ob in associate(list(detections), s.min_overlap):
             w = self._workers.get(ob.key)
@@ -354,21 +449,79 @@ class ComplianceEngine:
                     w.history[item].add(now, st is ItemStatus.MISSING)
                 w.history[item].prune(now - max(s.violation_delay, 0.5))
 
-            views.append(self._evaluate(w, required, now, events))
+            inside = self._zones_at(ob.box, frame_size)
+            required = self._required_for(inside)
+            view = self._evaluate(w, required or [], now, events, monitored=required is not None)
+            if not w.synthetic:
+                self._check_restricted(w, [z for z in inside if z.kind == "restricted"], now, events)
+            if w.intrusion is not None:
+                view.state = WorkerState.VIOLATION
+                view.intrusion = w.intrusion.zone_name
+                view.violation_id = view.violation_id or w.intrusion.id
+            view.zones = [z.name for z in inside]
+            views.append(view)
 
-        # Workers not seen this frame: close their violation after lost_timeout.
+            if not w.synthetic and (required is not None or w.intrusion is not None):
+                self._activity.worker_seconds += dt
+                if view.state is WorkerState.VIOLATION:
+                    self._activity.violation_seconds += dt
+
+        self._activity.peak_workers = max(
+            self._activity.peak_workers, sum(1 for v in views if not v.synthetic)
+        )
+
+        # Workers not seen this frame: close their violations after lost_timeout.
         for key in list(self._workers):
             w = self._workers[key]
             if w.last_seen == now:
                 continue
             if now - w.last_seen >= s.lost_timeout:
-                if w.violation:
-                    events.append(self._close(w, w.last_seen))
+                events += self._close_all(w, w.last_seen)
                 del self._workers[key]
 
         return FrameResult(views, events)
 
-    def _evaluate(self, w: _Worker, required: list[PPEItem], now: float, events: list) -> WorkerView:
+    def _snapshot_due(self, v: Violation, now: float) -> bool:
+        s = self.settings
+        if v.snapshots < s.max_snapshots and now - v.last_snapshot_at >= s.snapshot_interval:
+            v.snapshots += 1
+            v.last_snapshot_at = now
+            return True
+        return False
+
+    def _check_restricted(self, w: _Worker, zones: list[Zone], now: float, events: list) -> None:
+        s = self.settings
+        if zones:
+            w.outside_since = None
+            if w.intrusion is None:
+                if w.restricted_since is None:
+                    w.restricted_since = now
+                if now - w.restricted_since >= s.violation_delay:
+                    z = zones[0]
+                    w.intrusion = Violation(
+                        id=uuid.uuid4().hex[:12], worker_key=w.key, missing=set(),
+                        started_at=now, last_seen=now, kind="zone", zone_id=z.id,
+                        zone_name=z.name, snapshots=1, last_snapshot_at=now,
+                    )
+                    events.append(ViolationEvent("opened", w.intrusion, snapshot=True))
+            else:
+                w.intrusion.last_seen = now
+                if self._snapshot_due(w.intrusion, now):
+                    events.append(ViolationEvent("updated", w.intrusion, snapshot=True))
+        else:
+            w.restricted_since = None
+            if w.intrusion is not None:
+                w.intrusion.last_seen = now
+                if w.outside_since is None:
+                    w.outside_since = now
+                if now - w.outside_since >= s.clear_after:
+                    v, w.intrusion, w.outside_since = w.intrusion, None, None
+                    v.ended_at = now
+                    events.append(ViolationEvent("closed", v))
+
+    def _evaluate(
+        self, w: _Worker, required: list[PPEItem], now: float, events: list, monitored: bool = True
+    ) -> WorkerView:
         s = self.settings
         delay = s.violation_delay
         observed_long_enough = now - w.first_seen >= delay * 0.8
@@ -409,13 +562,7 @@ class ComplianceEngine:
                 v.last_seen = now
                 grew = not set(missing_now) <= v.missing
                 v.missing |= set(missing_now)
-                snap = (
-                    v.snapshots < s.max_snapshots
-                    and now - v.last_snapshot_at >= s.snapshot_interval
-                )
-                if snap:
-                    v.snapshots += 1
-                    v.last_snapshot_at = now
+                snap = self._snapshot_due(v, now)
                 if grew or snap:
                     events.append(ViolationEvent("updated", v, snapshot=snap))
             state = WorkerState.VIOLATION
@@ -430,6 +577,8 @@ class ComplianceEngine:
             if w.violation is not None:
                 state = WorkerState.VIOLATION  # still within the clear-after grace period
                 w.violation.last_seen = now
+            elif not monitored:
+                state = WorkerState.UNMONITORED
             elif pending:
                 state = WorkerState.PENDING
             elif any_unknown:
@@ -445,6 +594,7 @@ class ComplianceEngine:
             missing=sorted(w.violation.missing, key=lambda i: i.value) if w.violation else [],
             violation_id=w.violation.id if w.violation else None,
             synthetic=w.synthetic,
+            required=list(required),
         )
 
     def _close(self, w: _Worker, at: float) -> ViolationEvent:
@@ -454,3 +604,13 @@ class ComplianceEngine:
         w.violation = None
         w.compliant_since = None
         return ViolationEvent("closed", v)
+
+    def _close_all(self, w: _Worker, at: float) -> list[ViolationEvent]:
+        events = []
+        if w.violation is not None:
+            events.append(self._close(w, at))
+        if w.intrusion is not None:
+            v, w.intrusion, w.outside_since = w.intrusion, None, None
+            v.ended_at = at
+            events.append(ViolationEvent("closed", v))
+        return events

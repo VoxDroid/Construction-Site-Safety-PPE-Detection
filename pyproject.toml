@@ -27,19 +27,22 @@ dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.30",
     "pydantic>=2.7",
+    "python-multipart>=0.0.18",
 ]
 
 [project.optional-dependencies]
 dataset = ["kagglehub>=0.3"]
 dev = ["pytest>=8", "httpx>=0.27", "ruff>=0.6"]
+e2e = ["playwright>=1.45"]
+docs = ["mkdocs-material>=9.5"]
 
 [project.scripts]
 ppe-guard = "ppe_guard.cli:main"
 
 [project.urls]
-Homepage = "https://voxdroid.github.io/Construction-Site-Safety-PPE-Detection/"
-Repository = "https://github.com/VoxDroid/Construction-Site-Safety-PPE-Detection"
-Issues = "https://github.com/VoxDroid/Construction-Site-Safety-PPE-Detection/issues"
+Homepage = "https://voxdroid.github.io/ppe-guard/"
+Repository = "https://github.com/VoxDroid/ppe-guard"
+Issues = "https://github.com/VoxDroid/ppe-guard/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/ppe_guard"]

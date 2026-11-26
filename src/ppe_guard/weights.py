@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 RELEASE_URL = (
-    "https://github.com/VoxDroid/Construction-Site-Safety-PPE-Detection/releases/download/v2.0.0"
+    "https://github.com/VoxDroid/ppe-guard/releases/download/v2.0.0"
 )
 
 

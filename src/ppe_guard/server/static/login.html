@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Log in · PPE Guard</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/css/app.css">
+  <script>
+    try { const t = localStorage.getItem("ppe-theme"); if (t) document.documentElement.dataset.theme = t; } catch {}
+  </script>
+</head>
+<body>
+  <main class="login-page">
+    <div class="card login-card">
+      <div class="brand">
+        <img src="/static/favicon.svg" alt="" width="32" height="32">
+        <span><strong>PPE Guard</strong><small>Sign in to the dashboard</small></span>
+      </div>
+      <form id="login">
+        <label class="field">Password<input type="password" id="password" autocomplete="current-password" required autofocus></label>
+        <label class="check"><input type="checkbox" id="remember">Keep me signed in for 30 days</label>
+        <div class="error-text" id="error" role="alert"></div>
+        <button class="btn primary" type="submit">Sign in</button>
+      </form>
+    </div>
+  </main>
+  <script>
+    const next = new URLSearchParams(location.search).get("next") || "/";
+    const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : "/";
+    fetch("/api/auth/status").then((r) => r.json()).then((s) => { if (!s.enabled || s.authenticated) location.replace(safeNext); });
+    document.getElementById("login").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const err = document.getElementById("error");
+      err.textContent = "";
+      const r = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: document.getElementById("password").value, remember: document.getElementById("remember").checked }),
+      });
+      if (r.ok) { location.replace(safeNext); return; }
+      let msg = "Could not sign in";
+      try { msg = (await r.json()).detail || msg; } catch {}
+      err.textContent = msg.charAt(0).toUpperCase() + msg.slice(1) + ".";
+      document.getElementById("password").select();
+    });
+  </script>
+</body>
+</html>

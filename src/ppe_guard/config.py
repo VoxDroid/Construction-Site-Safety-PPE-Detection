@@ -75,6 +75,47 @@ class AlertSettings(BaseModel):
 _ID_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,39}$")
 
 
+def _slug(v: str) -> str:
+    if not _ID_RE.match(v):
+        raise ValueError("use 1-40 lowercase letters, digits, '-' or '_'")
+    return v
+
+
+class Zone(BaseModel):
+    """A polygon on a camera image, in coordinates normalised to 0-1 (x right, y down).
+
+    * ``ppe`` zones: PPE is only checked for workers standing inside one. ``required_ppe``
+      overrides the global rule inside the zone.
+    * ``restricted`` zones: anyone who stays inside raises a zone violation.
+
+    A worker's position is the bottom centre of their box (their feet).
+    """
+
+    id: str = Field(..., description="Short slug, unique per camera.")
+    name: str = Field(..., min_length=1, max_length=60)
+    kind: Literal["ppe", "restricted"] = "ppe"
+    points: list[tuple[float, float]] = Field(..., min_length=3, max_length=64)
+    required_ppe: RequiredPPE | None = Field(
+        None, description="PPE zones only: items required inside this zone (default: global rule)."
+    )
+    enabled: bool = True
+
+    @field_validator("id")
+    @classmethod
+    def _check_id(cls, v: str) -> str:
+        return _slug(v)
+
+    @field_validator("points")
+    @classmethod
+    def _in_unit_square(cls, v: list[tuple[float, float]]) -> list[tuple[float, float]]:
+        out = []
+        for x, y in v:
+            if not (-0.01 <= x <= 1.01 and -0.01 <= y <= 1.01):
+                raise ValueError("zone points must be normalised to the 0-1 range")
+            out.append((round(min(max(x, 0.0), 1.0), 4), round(min(max(y, 0.0), 1.0), 4)))
+        return out
+
+
 class CameraConfig(BaseModel):
     id: str = Field(..., description="Short slug, e.g. 'gate-north'.")
     name: str = Field(..., min_length=1, max_length=80)
@@ -82,13 +123,45 @@ class CameraConfig(BaseModel):
     enabled: bool = True
     autostart: bool = False
     loop: bool = Field(True, description="Restart video files when they end.")
+    zones: list[Zone] = Field(default_factory=list)
 
     @field_validator("id")
     @classmethod
-    def _slug(cls, v: str) -> str:
-        if not _ID_RE.match(v):
-            raise ValueError("use 1-40 lowercase letters, digits, '-' or '_'")
+    def _check_id(cls, v: str) -> str:
+        return _slug(v)
+
+    @field_validator("zones")
+    @classmethod
+    def _unique_zone_ids(cls, v: list[Zone]) -> list[Zone]:
+        ids = [z.id for z in v]
+        if len(ids) != len(set(ids)):
+            raise ValueError("zone ids must be unique per camera")
         return v
+
+
+class GeneralSettings(BaseModel):
+    site_name: str = Field("My site", min_length=1, max_length=80,
+                           description="Shown in the dashboard, reports and alerts.")
+
+
+class RecordingSettings(BaseModel):
+    clips: bool = Field(True, description="Save a short video clip with every violation.")
+    pre_seconds: float = Field(4.0, ge=0, le=30, description="Seconds of video kept from before a violation.")
+    max_seconds: float = Field(20.0, ge=2, le=120, description="Longest clip, including the pre-roll.")
+    fps: float = Field(8.0, ge=1, le=30, description="Frame rate of saved clips.")
+    max_width: int = Field(800, ge=320, le=1920, description="Clips are scaled down to this width.")
+
+
+class StorageSettings(BaseModel):
+    retention_days: int = Field(
+        0, ge=0, le=3650,
+        description="Delete violations, snapshots and clips older than this. 0 keeps everything.",
+    )
+
+
+class AnalysisSettings(BaseModel):
+    max_upload_mb: int = Field(500, ge=1, le=10_000, description="Largest file accepted by Analyze.")
+    keep_jobs: int = Field(20, ge=1, le=500, description="Finished analysis jobs to keep on disk.")
 
 
 def _default_cameras() -> list[CameraConfig]:
@@ -96,9 +169,13 @@ def _default_cameras() -> list[CameraConfig]:
 
 
 class Settings(BaseModel):
+    general: GeneralSettings = Field(default_factory=GeneralSettings)
     detection: DetectionSettings = Field(default_factory=DetectionSettings)
     compliance: ComplianceSettings = Field(default_factory=ComplianceSettings)
     alerts: AlertSettings = Field(default_factory=AlertSettings)
+    recording: RecordingSettings = Field(default_factory=RecordingSettings)
+    storage: StorageSettings = Field(default_factory=StorageSettings)
+    analysis: AnalysisSettings = Field(default_factory=AnalysisSettings)
     cameras: list[CameraConfig] = Field(default_factory=_default_cameras)
 
     @field_validator("cameras")

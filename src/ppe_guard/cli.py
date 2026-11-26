@@ -36,11 +36,48 @@ def cmd_serve(a: argparse.Namespace) -> None:
     if a.models_dir:
         os.environ["PPE_GUARD_MODELS_DIR"] = str(Path(a.models_dir).resolve())
     app = create_app(Path(a.data_dir) if a.data_dir else None, autostart=not a.no_autostart)
-    if a.host not in ("127.0.0.1", "localhost"):
-        print("warning: the dashboard has no login; only expose it on a trusted network "
-              "or behind an authenticating reverse proxy.", file=sys.stderr)
+    if a.host not in ("127.0.0.1", "localhost", "::1") and not app.state.ctx.auth.enabled:
+        print("warning: no password is set, so anyone who can reach this address can use the "
+              "dashboard. Set one with `ppe-guard password set` or PPE_GUARD_PASSWORD.", file=sys.stderr)
     print(f"PPE Guard dashboard: http://{'localhost' if a.host in ('0.0.0.0', '127.0.0.1') else a.host}:{a.port}")
     uvicorn.run(app, host=a.host, port=a.port, log_level="warning")
+
+
+# ---------------------------------------------------------------- password
+
+
+def cmd_password(a: argparse.Namespace) -> None:
+    import getpass
+
+    from ppe_guard.auth import AuthManager
+    from ppe_guard.config import default_data_dir
+
+    data_dir = Path(a.data_dir).resolve() if a.data_dir else default_data_dir()
+    auth = AuthManager(data_dir, env_password="")
+    if a.action == "set":
+        if a.stdin:
+            pw = sys.stdin.readline().rstrip("\r\n")
+        else:
+            pw = getpass.getpass("New dashboard password: ")
+            if getpass.getpass("Repeat it: ") != pw:
+                sys.exit("error: the passwords do not match")
+        try:
+            auth.set_password(pw)
+        except ValueError as e:
+            sys.exit(f"error: {e}")
+        print(f"password set in {auth.path} (restart a running server to apply it)")
+    elif a.action == "clear":
+        auth.clear_password()
+        print("password removed: the dashboard is open to anyone who can reach it")
+    elif a.action == "token":
+        if not auth.enabled:
+            sys.exit("error: set a password first (`ppe-guard password set`)")
+        print(auth.create_token())
+        print("Use it as `Authorization: Bearer <token>` or `?token=<token>`. It replaces any "
+              "previous token; restart a running server to apply it.", file=sys.stderr)
+    else:
+        print(f"password: {'set' if auth.enabled else 'not set'}, API token: "
+              f"{'set' if auth.token_set else 'not set'} ({auth.path})")
 
 
 # ---------------------------------------------------------------- predict
@@ -70,6 +107,7 @@ def cmd_predict(a: argparse.Namespace) -> None:
     from ppe_guard.compliance import ComplianceEngine, PPEItem, evaluate_still
     from ppe_guard.config import ComplianceSettings, DetectionSettings, RequiredPPE
     from ppe_guard.detector import Detector, draw
+    from ppe_guard.video import open_writer
 
     required_names = [r.strip() for r in a.require.split(",") if r.strip()]
     try:
@@ -126,7 +164,7 @@ def cmd_predict(a: argparse.Namespace) -> None:
             # For files use the video clock, so results don't depend on processing speed.
             now = n / fps if is_file else time.time()
             dets = det(frame)
-            res = engine.update(dets, now=now)
+            res = engine.update(dets, now=now, frame_size=(frame.shape[1], frame.shape[0]))
             for ev in res.events:
                 v = ev.violation
                 stamp = f"{now:8.2f}s" if is_file else time.strftime("%H:%M:%S")
@@ -140,9 +178,10 @@ def cmd_predict(a: argparse.Namespace) -> None:
             out = draw(frame, res, dets, required)
             if save_dir:
                 if writer is None:
-                    name = (src_path.stem if is_file else "stream") + "_ppe.mp4"
+                    stem = save_dir / ((src_path.stem if is_file else "stream") + "_ppe")
                     h, w = out.shape[:2]
-                    writer = cv2.VideoWriter(str(save_dir / name), cv2.VideoWriter_fourcc(*"mp4v"), fps, (w, h))
+                    writer, out_path, _ = open_writer(stem, fps, (w, h))
+                    print(f"writing {out_path}", file=sys.stderr)
                 writer.write(out)
             if a.show:
                 cv2.imshow("PPE Guard (q to quit)", out)
@@ -295,6 +334,12 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--models-dir", help="where model weights are stored (default ./models)")
     s.add_argument("--no-autostart", action="store_true", help="don't start cameras marked autostart")
     s.set_defaults(func=cmd_serve)
+
+    s = sub.add_parser("password", help="protect the dashboard with a password, or create an API token")
+    s.add_argument("action", choices=["set", "clear", "token", "status"])
+    s.add_argument("--data-dir", help="the server's data directory (default ./data)")
+    s.add_argument("--stdin", action="store_true", help="read the new password from standard input")
+    s.set_defaults(func=cmd_password)
 
     s = sub.add_parser("predict", help="check images, a folder, a video, a webcam or a stream")
     s.add_argument("source", help="image, folder, video file, webcam index (0) or rtsp/http URL")

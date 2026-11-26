@@ -5,12 +5,12 @@
 **Real-time PPE compliance monitoring for construction sites.**
 It spots workers without hard hats or hi-vis vests, judges each worker separately, keeps snapshot evidence and sends alerts.
 
-[![CI](https://github.com/VoxDroid/Construction-Site-Safety-PPE-Detection/actions/workflows/ci.yml/badge.svg)](https://github.com/VoxDroid/Construction-Site-Safety-PPE-Detection/actions/workflows/ci.yml)
+[![CI](https://github.com/VoxDroid/ppe-guard/actions/workflows/ci.yml/badge.svg)](https://github.com/VoxDroid/ppe-guard/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/python-3.10%E2%80%933.13-blue)
 ![Models](https://img.shields.io/badge/models-YOLO26s%20%7C%20YOLOv8s-f5b700)
 
-[Website](https://voxdroid.github.io/Construction-Site-Safety-PPE-Detection/) ·
+[Website](https://voxdroid.github.io/ppe-guard/) ·
 [Quick start](#quick-start) ·
 [Dashboard](#the-dashboard) ·
 [Model results](#model-results) ·
@@ -84,8 +84,8 @@ persist for the violation delay before it counts.
 for images and is usable on a single low-resolution stream.
 
 ```bash
-git clone https://github.com/VoxDroid/Construction-Site-Safety-PPE-Detection.git
-cd Construction-Site-Safety-PPE-Detection
+git clone https://github.com/VoxDroid/ppe-guard.git
+cd ppe-guard
 python -m venv .venv
 source .venv/bin/activate            # Windows: .venv\Scripts\activate
 

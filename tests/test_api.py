@@ -32,7 +32,7 @@ def test_health_and_index(client):
     assert client.get("/api/health").json()["status"] == "ok"
     r = client.get("/")
     assert r.status_code == 200 and "PPE Guard" in r.text
-    assert client.get("/static/app.js").status_code == 200
+    assert client.get("/static/js/main.js").status_code == 200
 
 
 def test_settings_roundtrip_and_validation(client):

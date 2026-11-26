@@ -3,8 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="light dark">
-  <title>Log in · PPE Guard</title>
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#090b0d">
+  <title>Sign in · PPE Guard</title>
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/static/css/app.css">
   <script>
@@ -13,18 +14,30 @@
 </head>
 <body>
   <main class="login-page">
-    <div class="card login-card">
+    <section class="login-hero" aria-hidden="true">
       <div class="brand">
-        <img src="/static/favicon.svg" alt="" width="32" height="32">
-        <span><strong>PPE Guard</strong><small>Sign in to the dashboard</small></span>
+        <img src="/static/favicon.svg" alt="" width="40" height="40">
+        <span class="brand-text"><strong>PPE<b>GUARD</b></strong><small>Site safety monitoring</small></span>
       </div>
-      <form id="login">
-        <label class="field">Password<input type="password" id="password" autocomplete="current-password" required autofocus></label>
-        <label class="check"><input type="checkbox" id="remember">Keep me signed in for 30 days</label>
-        <div class="error-text" id="error" role="alert"></div>
-        <button class="btn primary" type="submit">Sign in</button>
-      </form>
-    </div>
+      <div>
+        <div class="eyebrow" style="color:#ffcf3a">Control room</div>
+        <h1>Every worker.<br>Every helmet.<br><em>Every second.</em></h1>
+        <p>Live PPE checks on every camera, with evidence, alerts and reports. Running on your own hardware.</p>
+      </div>
+      <div class="note">site office only — sign in to continue</div>
+    </section>
+    <section class="login-side">
+      <div class="card login-card">
+        <div class="eyebrow">Sign in</div>
+        <h2 style="font-family:var(--stencil);font-size:34px;font-weight:800;margin:6px 0 22px;letter-spacing:.03em">Dashboard access</h2>
+        <form id="login">
+          <label class="field">Password<input type="password" id="password" autocomplete="current-password" required autofocus></label>
+          <label class="check"><input type="checkbox" id="remember">Keep me signed in for 30 days</label>
+          <div class="error-text" id="error" role="alert"></div>
+          <button class="btn primary" type="submit">Sign in</button>
+        </form>
+      </div>
+    </section>
   </main>
   <script>
     const next = new URLSearchParams(location.search).get("next") || "/";

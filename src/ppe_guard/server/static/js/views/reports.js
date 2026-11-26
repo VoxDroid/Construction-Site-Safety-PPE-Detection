@@ -1,5 +1,5 @@
 // Reports: a printable daily or weekly summary (Print → Save as PDF).
-import { $, api, errorToast, fmtDuration, fmtNum, fmtPct, fmtTime, html, icon, isoDate, ITEM_LABEL, render, violationTitle, workerName } from "../util.js";
+import { $, api, errorToast, fmtDuration, fmtNum, fmtPct, fmtTime, html, icon, isoDate, ITEM_LABEL, kpi, render, violationTitle, workerName } from "../util.js";
 import { state } from "../store.js";
 import { stackedBars } from "../charts.js";
 
@@ -42,10 +42,10 @@ function reportDoc(r, f, cams) {
       </header>
 
       <div class="kpis">
-        <div class="card kpi"><div class="label">Violations</div><div class="value">${fmtNum(t.violations)}</div><div class="sub">${fmtNum(t.ppe)} PPE · ${fmtNum(t.zone)} no-entry</div></div>
-        <div class="card kpi"><div class="label">Compliance rate</div><div class="value">${fmtPct(t.compliance_rate)}</div><div class="sub">${fmtNum(t.worker_hours)} worker-hours monitored</div></div>
-        <div class="card kpi"><div class="label">Median duration</div><div class="value">${fmtDuration(t.median_duration)}</div><div class="sub">average ${fmtDuration(t.avg_duration)}</div></div>
-        <div class="card kpi"><div class="label">Reviewed</div><div class="value">${fmtPct(t.acknowledged_rate, 0)}</div><div class="sub">of violations</div></div>
+        ${kpi({ label: "Violations", value: fmtNum(t.violations), icon: "alert", sub: `${fmtNum(t.ppe)} PPE · ${fmtNum(t.zone)} no-entry` })}
+        ${kpi({ label: "Compliance rate", value: fmtPct(t.compliance_rate), icon: "shield", sub: `${fmtNum(t.worker_hours)} worker-hours monitored` })}
+        ${kpi({ label: "Median duration", value: fmtDuration(t.median_duration), icon: "timer", sub: `average ${fmtDuration(t.avg_duration)}` })}
+        ${kpi({ label: "Reviewed", value: fmtPct(t.acknowledged_rate, 0), icon: "circle-check", sub: "of violations" })}
       </div>
 
       ${r.days > 1 ? html`<h2>Violations per day</h2><div class="legend">${SERIES.map((s) => html`<span><i style="background:${s.color}"></i>${s.label}</span>`)}</div><div id="r-daily"></div>` : ""}
@@ -77,7 +77,7 @@ export async function mount(main) {
   const f = { period: "day", date: isoDate(new Date()), camera_id: "" };
   render(main, html`
     <div class="page-head no-print">
-      <div><h1>Reports</h1><p>A summary for a day or a week, ready to print or save as PDF.</p></div>
+      <div><div class="eyebrow">Sheet B-02 · Insight</div><h1>Reports</h1><p>A summary for a day or a week, ready to print or save as PDF.</p></div>
       <div class="actions">
         <div class="seg" id="period"><button data-p="day">Day</button><button data-p="week">Week</button></div>
         <input type="date" id="date" style="width:auto" value="${f.date}" max="${f.date}">

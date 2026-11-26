@@ -51,6 +51,14 @@ export const $ = (sel, root = document) => root.querySelector(sel);
 export const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 export const icon = (name, cls = "") => raw(`<svg class="ic ${cls}" aria-hidden="true"><use href="#i-${name}"/></svg>`);
 
+/** A KPI tile: label with icon, big value, optional "of" suffix and a sub line. */
+export function kpi({ label, value, sub = "", icon: ic = "", tone = "", alert = false, of = null }) {
+  return html`<div class="card kpi ${alert ? "alert" : ""}">
+    <div class="label">${ic ? icon(ic) : ""}${label}</div>
+    <div class="value ${tone}">${value}${of !== null ? html`<span class="of">/${of}</span>` : ""}</div>
+    ${sub ? html`<div class="sub">${sub}</div>` : ""}</div>`;
+}
+
 export const ITEM_LABEL = { helmet: "Hard hat", vest: "Vest", mask: "Mask" };
 export const STATE_LABEL = {
   compliant: "Compliant", pending: "Checking", violation: "Violation", unknown: "Not visible", unmonitored: "No PPE required here",

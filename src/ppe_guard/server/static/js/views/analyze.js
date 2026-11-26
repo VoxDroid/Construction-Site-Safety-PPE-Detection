@@ -1,5 +1,5 @@
 // Analyze: upload a photo or a video and get a verdict for every worker.
-import { $, api, confirmDialog, errorToast, fmtDuration, fmtPct, fmtTime, html, icon, ITEM_LABEL, render, STATE_LABEL, toast, workerName } from "../util.js";
+import { $, api, confirmDialog, errorToast, fmtDuration, fmtPct, fmtTime, html, icon, ITEM_LABEL, kpi, render, STATE_LABEL, toast, workerName } from "../util.js";
 import { bus } from "../store.js";
 
 const ACCEPT = ".jpg,.jpeg,.png,.bmp,.webp,.jfif,.tif,.tiff,.mp4,.avi,.mov,.mkv,.webm,.m4v,.mpg,.mpeg,.wmv";
@@ -40,7 +40,7 @@ function imageResult(j) {
     <div class="stack">
       ${verdict}
       <div class="media-main" style="aspect-ratio:${r.width}/${r.height}"><img src="/analysis/${j.id}/${r.image}" alt="Annotated result"></div>
-      <section class="card"><div class="card-head"><h2>Workers</h2><span class="muted small">model ${r.weights}</span></div>
+      <section class="card"><div class="card-head"><h2>${icon("users")}Workers</h2><span class="muted small">model ${r.weights}</span></div>
         ${workers.length ? html`<div class="table-wrap"><table class="table"><thead><tr><th>Worker</th><th>Verdict</th><th>Equipment</th></tr></thead>
           <tbody>${workers.map((w) => html`<tr><td>${workerName(w.key)}</td><td><span class="pill ${w.state === "violation" ? "bad" : w.state === "compliant" ? "good" : ""}">${STATE_LABEL[w.state]}</span></td><td>${itemsCell(w)}</td></tr>`)}</tbody></table></div>`
           : html`<div class="empty small">No workers detected.</div>`}
@@ -55,10 +55,10 @@ function videoResult(j) {
   return html`
     <div class="stack">
       <div class="kpis" style="margin:0">
-        <div class="card kpi"><div class="label">Violations</div><div class="value">${r.violations.length}</div><div class="sub">${r.workers_seen} worker(s) tracked</div></div>
-        <div class="card kpi"><div class="label">Compliance rate</div><div class="value">${fmtPct(r.compliance_rate)}</div><div class="sub">of worker-time</div></div>
-        <div class="card kpi"><div class="label">Video</div><div class="value">${fmtDuration(r.duration)}</div><div class="sub">${r.frames} frames at ${r.fps} fps</div></div>
-        <div class="card kpi"><div class="label">Processing</div><div class="value">${r.processing_fps}</div><div class="sub">frames per second · ${r.weights}</div></div>
+        ${kpi({ label: "Violations", value: r.violations.length, icon: "alert", alert: r.violations.length > 0, sub: `${r.workers_seen} worker(s) tracked` })}
+        ${kpi({ label: "Compliance rate", value: fmtPct(r.compliance_rate), icon: "shield", sub: "of worker-time" })}
+        ${kpi({ label: "Video", value: fmtDuration(r.duration), icon: "film", sub: `${r.frames} frames at ${r.fps} fps` })}
+        ${kpi({ label: "Processing", value: r.processing_fps, icon: "gauge", sub: `frames per second · ${r.weights}` })}
       </div>
       ${r.playable
         ? html`<div class="media-main"><video id="player" src="/analysis/${j.id}/${r.video}" controls playsinline preload="metadata"></video></div>`
@@ -70,7 +70,7 @@ function videoResult(j) {
         </div>
         <div class="row small muted"><span>0:00</span><span class="spacer"></span><span>${fmtDuration(r.duration)}</span></div>
       </div>
-      <section class="card"><div class="card-head"><h2>Violations in this video</h2></div>
+      <section class="card"><div class="card-head"><h2>${icon("film")}Violations in this video</h2></div>
         ${r.violations.length ? html`<div class="table-wrap"><table class="table"><thead><tr><th>At</th><th>Snapshot</th><th>Worker</th><th>What</th><th class="num">Lasted</th></tr></thead>
           <tbody>${r.violations.map((v) => html`<tr class="clickable" data-t="${v.start}">
             <td class="mono">${fmtDuration(v.start)}</td>
@@ -89,12 +89,12 @@ export async function mount(main, [openId]) {
   let current = openId || jobs[0]?.id || null;
   render(main, html`
     <div class="page-head">
-      <div><h1>Analyze</h1><p>Check a photo or a video file. Results use the same model and PPE rules as the cameras.</p></div>
+      <div><div class="eyebrow">Sheet B-03 · Tools</div><h1>Analyze</h1><p>Check a photo or a video file. Results use the same model and PPE rules as the cameras.</p></div>
     </div>
     <div class="analyze-layout">
       <div class="stack">
         <label class="drop" id="drop">
-          ${icon("upload")}
+          ${icon("cloud")}
           <h3>Drop a photo or video here</h3>
           <p class="muted small">or click to choose a file · JPG, PNG, MP4, MOV, AVI, MKV, WEBM…</p>
           <input type="file" id="file" accept="${ACCEPT}" multiple hidden>

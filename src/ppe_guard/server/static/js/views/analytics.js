@@ -1,5 +1,5 @@
 // Analytics: trends, compliance rate, when and where violations happen.
-import { $, api, errorToast, fmtDuration, fmtNum, fmtPct, html, icon, rateClass, render } from "../util.js";
+import { $, api, errorToast, fmtDuration, fmtNum, fmtPct, html, icon, kpi, rateClass, render } from "../util.js";
 import { bus } from "../store.js";
 import { hbars, heatmap, rateLine, stackedBars } from "../charts.js";
 
@@ -18,7 +18,7 @@ export async function mount(main, _params, query) {
   const f = { days: Number(query.get("days")) || 7, camera_id: query.get("camera_id") || "" };
   render(main, html`
     <div class="page-head">
-      <div><h1>Analytics</h1><p>How compliance is trending, and when and where violations happen.</p></div>
+      <div><div class="eyebrow">Sheet B-01 · Insight</div><h1>Analytics</h1><p>How compliance is trending, and when and where violations happen.</p></div>
       <div class="actions">
         <div class="seg" id="range">${[7, 30, 90].map((d) => html`<button data-days="${d}">${d} days</button>`)}</div>
         <select id="cam" style="width:auto"><option value="">All cameras</option>${cams.map((c) => html`<option value="${c.id}">${c.name}</option>`)}</select>
@@ -27,16 +27,16 @@ export async function mount(main, _params, query) {
     </div>
     <div class="kpis" id="kpis"></div>
     <div class="grid-2">
-      <section class="card"><div class="card-head"><div><h2>Violations per day</h2><p>Counted by what was missing. One violation can miss two items.</p></div></div>
+      <section class="card"><div class="card-head"><div><h2>${icon("chart")}Violations per day</h2><p>Counted by what was missing. One violation can miss two items.</p></div></div>
         <div class="card-pad"><div class="legend">${SERIES.map((s) => html`<span><i style="background:${s.color}"></i>${s.label}</span>`)}</div><div id="c-daily"></div></div></section>
-      <section class="card"><div class="card-head"><div><h2>Compliance rate</h2><p>Share of monitored worker-time without an open violation.</p></div></div>
+      <section class="card"><div class="card-head"><div><h2>${icon("shield")}Compliance rate</h2><p>Share of monitored worker-time without an open violation.</p></div></div>
         <div class="card-pad"><div id="c-rate"></div></div></section>
-      <section class="card"><div class="card-head"><div><h2>When violations start</h2><p>Day of the week by hour of the day, local time.</p></div></div>
+      <section class="card"><div class="card-head"><div><h2>${icon("clock")}When violations start</h2><p>Day of the week by hour of the day, local time.</p></div></div>
         <div class="card-pad"><div id="c-heat"></div></div></section>
-      <section class="card"><div class="card-head"><div><h2>What is missing</h2><p>Violations by item or zone.</p></div></div>
+      <section class="card"><div class="card-head"><div><h2>${icon("hardhat")}What is missing</h2><p>Violations by item or zone.</p></div></div>
         <div class="card-pad"><div id="c-items"></div></div></section>
-      <section class="card"><div class="card-head"><h2>By camera</h2></div><div id="c-cams"></div></section>
-      <section class="card"><div class="card-head"><div><h2>No-entry zones</h2><p>Entries per zone.</p></div></div>
+      <section class="card"><div class="card-head"><h2>${icon("video")}By camera</h2></div><div id="c-cams"></div></section>
+      <section class="card"><div class="card-head"><div><h2>${icon("zone")}No-entry zones</h2><p>Entries per zone.</p></div></div>
         <div class="card-pad"><div id="c-zones"></div></div></section>
     </div>`);
 
@@ -55,11 +55,11 @@ export async function mount(main, _params, query) {
     cleanups.splice(0).forEach((fn) => fn());
     const t = a.totals;
     render($("#kpis", main), html`
-      <div class="card kpi"><div class="label">Violations</div><div class="value">${fmtNum(t.violations)}</div><div class="sub">${fmtNum(t.ppe)} PPE · ${fmtNum(t.zone)} no-entry</div></div>
-      <div class="card kpi"><div class="label">Compliance rate</div><div class="value rate ${rateClass(t.compliance_rate)}">${fmtPct(t.compliance_rate)}</div><div class="sub">over ${fmtNum(t.worker_hours)} worker-hours</div></div>
-      <div class="card kpi"><div class="label">Typical duration</div><div class="value">${fmtDuration(t.median_duration)}</div><div class="sub">median · average ${fmtDuration(t.avg_duration)}</div></div>
-      <div class="card kpi"><div class="label">Reviewed</div><div class="value">${fmtPct(t.acknowledged_rate, 0)}</div><div class="sub">of violations in this period</div></div>
-      <div class="card kpi"><div class="label">Peak workers</div><div class="value">${fmtNum(t.peak_workers)}</div><div class="sub">on one camera at once</div></div>`);
+      ${kpi({ label: "Violations", value: fmtNum(t.violations), icon: "alert", sub: `${fmtNum(t.ppe)} PPE · ${fmtNum(t.zone)} no-entry` })}
+      ${kpi({ label: "Compliance rate", value: fmtPct(t.compliance_rate), tone: rateClass(t.compliance_rate), icon: "shield", sub: `over ${fmtNum(t.worker_hours)} worker-hours` })}
+      ${kpi({ label: "Typical duration", value: fmtDuration(t.median_duration), icon: "timer", sub: `median · average ${fmtDuration(t.avg_duration)}` })}
+      ${kpi({ label: "Reviewed", value: fmtPct(t.acknowledged_rate, 0), icon: "circle-check", sub: "of violations in this period" })}
+      ${kpi({ label: "Peak workers", value: fmtNum(t.peak_workers), icon: "users", sub: "on one camera at once" })}`);
 
     const labels = a.daily.map((d) => shortDate(d.date));
     cleanups.push(stackedBars($("#c-daily", main), {

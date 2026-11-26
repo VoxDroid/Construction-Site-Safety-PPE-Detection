@@ -1,7 +1,5 @@
 <div align="center">
 
-<img src="docs/assets/favicon.svg" width="72" height="72" alt="">
-
 # PPE Guard
 
 **Real-time PPE monitoring for construction sites.**<br>
@@ -9,17 +7,19 @@ Checks every worker for a hard hat, safety vest and mask on any camera, enforces
 keeps video evidence, sends alerts and reports your compliance rate.
 
 [![CI](https://github.com/VoxDroid/ppe-guard/actions/workflows/ci.yml/badge.svg)](https://github.com/VoxDroid/ppe-guard/actions/workflows/ci.yml)
-[![Docs](https://img.shields.io/badge/docs-voxdroid.github.io%2Fppe--guard-f5b700)](https://voxdroid.github.io/ppe-guard/)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-![Model](https://img.shields.io/badge/model-YOLO26s-f5b700)
+[![Docs](https://img.shields.io/badge/docs-voxdroid.github.io%2Fppe--guard-ffcc00?labelColor=0a2646)](https://voxdroid.github.io/ppe-guard/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-1f63d8?labelColor=0a2646)](LICENSE)
+![Python](https://img.shields.io/badge/python-3.10%2B-1f63d8?labelColor=0a2646)
+![Model](https://img.shields.io/badge/model-YOLO26s-ffcc00?labelColor=0a2646)
 
 **[Try it in your browser](https://voxdroid.github.io/ppe-guard/demo/)** ·
 [Documentation](https://voxdroid.github.io/ppe-guard/) ·
 [Quick start](#quick-start) ·
 [Results](#how-accurate-is-it)
 
-<img src="docs/assets/screenshots/live.png" alt="PPE Guard live view: cameras with workers boxed green or red, chips showing each worker's hard hat and vest status, and a live event feed" width="900">
+<a href="https://voxdroid.github.io/ppe-guard/"><img src="docs/assets/cover.webp" alt="PPE Guard: every worker, every helmet, every second. A blueprint-style cover sheet with a 3D hard hat" width="900"></a>
+
+<img src="docs/assets/screenshots/live.png" alt="PPE Guard live view: cameras with workers tagged by PPE status, a title-block KPI row and a site logbook" width="900">
 
 </div>
 
@@ -186,6 +186,8 @@ OpenVINO, Hailo).
 - **Detection and tracking**: [Ultralytics](https://github.com/ultralytics/ultralytics) (YOLO26,
   YOLOv8, ByteTrack integration). **Browser demo**: [ONNX Runtime Web](https://onnxruntime.ai/).
 - The training notebook builds on community Kaggle work on YOLOv8 PPE fine-tuning.
+- **Design**: fonts Big Shoulders Stencil, IBM Plex and Architects Daughter (SIL OFL), icons from
+  [Lucide](https://lucide.dev) (ISC); the hard hat on the website was modelled and rendered in Blender.
 
 PPE Guard's own code is released under the [MIT License](LICENSE). Ultralytics, and therefore the
 models trained and run with it, are licensed under **AGPL-3.0** by Ultralytics. Commercial or

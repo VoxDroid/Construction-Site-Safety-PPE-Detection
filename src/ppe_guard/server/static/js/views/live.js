@@ -1,5 +1,5 @@
 // Live: KPIs, every camera with its stream and workers, and the event feed.
-import { $, $$, api, errorToast, fmtPct, fmtTime, html, icon, ITEM_LABEL, raw, render, violationTitle, workerName } from "../util.js";
+import { $, $$, api, errorToast, fmtPct, fmtTime, html, icon, ITEM_LABEL, kpi, raw, rateClass, render, violationTitle, workerName } from "../util.js";
 import { bus } from "../store.js";
 
 const STATUS = {
@@ -29,27 +29,34 @@ export function workersFoot(workers) {
   return html`${real.slice(0, 12).map(workerChip)}${real.length > 12 ? html`<span class="muted">+${real.length - 12} more</span>` : ""}`;
 }
 
+export const sourceLabel = (src) => (src.match(/^\d+$/) ? `Webcam ${src}` : src.split(/[\\/]/).pop());
+
 function camCard(c) {
   const running = c.status === "running" || c.status === "reconnecting" || c.status === "starting";
   const violating = c.workers?.some((w) => w.state === "violation");
-  const err = c.status === "error" ? html`<p class="muted small" style="margin-top:6px">${c.error}</p>` : "";
+  const err = c.status === "error" ? html`<p class="small" style="margin-top:6px;color:#ff8f86">${c.error}</p>` : "";
   return html`
-    <article class="card cam" data-cam="${c.id}">
+    <article class="card cam ${violating ? "alarm" : ""}" data-cam="${c.id}">
+      <div class="cam-media">
+        <a class="cam-view ${violating ? "violating" : ""}" href="#/cameras/${c.id}" aria-label="Open ${c.name}">
+          ${running
+            ? html`<img src="/api/cameras/${c.id}/stream?ts=${Date.now()}" alt="Live view of ${c.name}">`
+            : html`<div class="placeholder">${icon("video")}<div>${c.enabled ? "Camera stopped" : "Camera disabled"}</div>${err}</div>`}
+        </a>
+        <div class="cam-top">
+          <span data-status>${statusPill(c.status)}</span>
+          <h3><a href="#/cameras/${c.id}">${c.name}</a></h3>
+          <span class="fps" data-fps>${c.status === "running" ? `${c.fps} FPS` : ""}</span>
+        </div>
+      </div>
       <div class="cam-head">
-        <h3><a href="#/cameras/${c.id}">${c.name}</a></h3>
-        <span data-status>${statusPill(c.status)}</span>
-        <span class="muted small" data-fps>${c.status === "running" ? `${c.fps} fps` : ""}</span>
+        <span class="src" title="${c.source}">${sourceLabel(c.source)}${c.zones?.length ? ` · ${c.zones.length} zone${c.zones.length > 1 ? "s" : ""}` : ""}</span>
         <a class="icon-btn sm" href="#/cameras/${c.id}/zones" title="Edit zones" aria-label="Edit zones for ${c.name}">${icon("zone", "ic-sm")}</a>
         ${running
           ? html`<button class="btn sm" data-act="stop">${icon("stop", "ic-sm")}Stop</button>`
           : html`<button class="btn sm primary" data-act="start" ${c.enabled ? "" : raw("disabled")}>${icon("play", "ic-sm")}Start</button>`}
       </div>
-      <a class="cam-view ${violating ? "violating" : ""}" href="#/cameras/${c.id}" aria-label="Open ${c.name}">
-        ${running
-          ? html`<img src="/api/cameras/${c.id}/stream?ts=${Date.now()}" alt="Live view of ${c.name}">`
-          : html`<div class="placeholder">${icon("live")}<div>${c.enabled ? "Camera stopped" : "Camera disabled"}</div>${err}</div>`}
-      </a>
-      <div class="cam-foot" data-workers>${running ? workersFoot(c.workers || []) : html`<span class="muted">${c.source.match(/^\d+$/) ? `Webcam ${c.source}` : c.source.split(/[\\/]/).pop()}</span>`}</div>
+      <div class="cam-foot" data-workers>${running ? workersFoot(c.workers || []) : html`<span class="muted">Not monitoring</span>`}</div>
     </article>`;
 }
 
@@ -65,17 +72,17 @@ function feedItem(v, event) {
 
 function kpis(s) {
   return html`
-    <div class="card kpi ${s.ongoing ? "alert" : ""}"><div class="label">Open violations</div><div class="value">${s.ongoing}</div><div class="sub">${s.violating_now} worker(s) right now</div></div>
-    <div class="card kpi"><div class="label">Violations today</div><div class="value">${s.today}</div><div class="sub">${s.unacknowledged} awaiting review</div></div>
-    <div class="card kpi"><div class="label">Compliance today</div><div class="value">${fmtPct(s.compliance_today)}</div><div class="sub">share of monitored worker-time</div></div>
-    <div class="card kpi"><div class="label">Workers in view</div><div class="value">${s.workers_in_view}</div><div class="sub">across running cameras</div></div>
-    <div class="card kpi"><div class="label">Cameras live</div><div class="value">${s.cameras_running}<span class="muted" style="font-size:18px">/${s.cameras_total}</span></div><div class="sub">${s.alert_error ? "alert delivery failing" : "streams running"}</div></div>`;
+    ${kpi({ label: "Open violations", value: s.ongoing, icon: "siren", alert: s.ongoing > 0, sub: `${s.violating_now} worker(s) right now` })}
+    ${kpi({ label: "Violations today", value: s.today, icon: "alert", sub: `${s.unacknowledged} awaiting review` })}
+    ${kpi({ label: "Compliance today", value: fmtPct(s.compliance_today), tone: rateClass(s.compliance_today), icon: "shield", sub: "share of monitored worker-time" })}
+    ${kpi({ label: "Workers in view", value: s.workers_in_view, icon: "users", sub: "across running cameras" })}
+    ${kpi({ label: "Cameras live", value: s.cameras_running, of: s.cameras_total, icon: "video", sub: s.alert_error ? "alert delivery failing" : "streams running" })}`;
 }
 
 export async function mount(main) {
   render(main, html`
     <div class="page-head">
-      <div><h1>Live</h1><p>Every camera, its workers and what they're missing, as it happens.</p></div>
+      <div><div class="eyebrow">Sheet A-01 · Monitor</div><h1>Live</h1><p>Every camera, its workers and what they're missing, as it happens.</p></div>
       <div class="actions">
         <button class="btn" id="start-all">${icon("play", "ic-sm")}Start all</button>
         <a class="btn" href="#/settings/cameras">${icon("plus", "ic-sm")}Add camera</a>
@@ -85,7 +92,7 @@ export async function mount(main) {
     <div class="live-layout">
       <div class="cams" id="cams"></div>
       <section class="card">
-        <div class="card-head"><h2>Live events</h2><a class="small muted" href="#/violations">All violations</a></div>
+        <div class="card-head"><h2>${icon("activity")}Live events</h2><a class="small muted" href="#/violations">All violations →</a></div>
         <div class="feed" id="feed"><div class="empty small">No events yet.</div></div>
       </section>
     </div>`);
@@ -94,7 +101,7 @@ export async function mount(main) {
   const drawCams = () => {
     const el = $("#cams", main);
     if (!cams.length) {
-      render(el, html`<div class="card empty">${icon("live")}<h3>No cameras yet</h3><p>Add a webcam, video file or RTSP stream in <a href="#/settings/cameras">Settings → Cameras</a>.</p></div>`);
+      render(el, html`<div class="card empty">${icon("video")}<h3>No cameras yet</h3><p>Add a webcam, video file or RTSP stream in <a href="#/settings/cameras">Settings → Cameras</a>.</p></div>`);
       return;
     }
     render(el, html`${cams.map(camCard)}`);
@@ -137,9 +144,10 @@ export async function mount(main) {
     if (m.type === "frame") {
       const card = $(`[data-cam="${CSS.escape(m.camera_id)}"]`, main);
       if (!card) return;
-      $("[data-fps]", card).textContent = `${m.fps} fps`;
+      $("[data-fps]", card).textContent = `${m.fps} FPS`;
       render($("[data-workers]", card), workersFoot(m.workers));
       $(".cam-view", card).classList.toggle("violating", m.violating);
+      card.classList.toggle("alarm", m.violating);
     } else if (m.type === "camera") {
       const c = cams.find((x) => x.id === m.camera_id);
       if (c && c.status !== m.status) loadCams();

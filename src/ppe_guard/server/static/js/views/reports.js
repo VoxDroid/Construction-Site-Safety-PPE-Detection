@@ -64,7 +64,7 @@ function reportDoc(r, f, cams) {
 
       <h2>All violations (${items.length}${r.violations.total > items.length ? ` of ${r.violations.total}` : ""})</h2>
       ${items.length ? html`<table><thead><tr><th>Time</th><th>Camera</th><th>Worker</th><th>What</th><th class="num">Duration</th><th>Reviewed</th><th>Note</th></tr></thead>
-        <tbody>${items.map((v) => html`<tr><td>${fmtTime(v.started_at, { full: true })}</td><td>${v.camera_name}</td><td>${workerName(v.worker_key)}</td><td>${violationTitle(v)}</td><td class="num">${fmtDuration(v.duration)}</td><td>${v.acknowledged ? "Yes" : "No"}</td><td>${v.note || ""}</td></tr>`)}</tbody></table>`
+        <tbody>${items.map((v) => html`<tr><td>${fmtTime(v.started_at, { full: true })}</td><td>${v.camera_name}</td><td>${workerName(v.worker_key)}</td><td>${violationTitle(v)}</td><td class="num">${fmtDuration(v.duration)}</td><td>${v.acknowledged ? "Yes" : "No"}</td><td class="note">${v.note || ""}</td></tr>`)}</tbody></table>`
         : html`<p class="muted">No violations in this period.</p>`}
 
       <div class="sig"><div>Reviewed by</div><div>Date and signature</div></div>

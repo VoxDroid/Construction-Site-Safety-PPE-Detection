@@ -1,5 +1,35 @@
 # Changelog
 
+## 2.0.1
+
+Fixes from a full review of the dashboard, the website and the demo: every page in both themes
+on desktop, tablet and phone, plus edge cases such as very long names and hostile input.
+
+### Fixed
+- **Video analysis**: a violation still open when an uploaded video ended was given the
+  wall-clock time as its end, so it showed as lasting hundreds of thousands of hours.
+- **CSV export**: notes and names starting with `=`, `+`, `-` or `@` are now written so that
+  spreadsheet apps show them as text instead of running them as formulas.
+- **Dialogs** closed when you leave their page (back button, a link, an address typed in). Before,
+  a violation's detail could stay open over the next page and block it.
+- **Names** made only of spaces are refused, and spaces around site, camera, source and zone
+  names are trimmed. The forms say so before sending.
+- **Phone layouts**: analytics, reports and analyze no longer run wider than the screen; report
+  tables scroll sideways; the ACTION stamp no longer covers the KPI label on narrow tiles.
+- **Long names and notes** (one long word, a URL) wrap or are shortened everywhere instead of
+  widening the page, including camera filters, the status bar, breadcrumbs and reports.
+- **Clips on Windows** use the built-in Media Foundation H.264 encoder directly, so the log no
+  longer shows two OpenCV errors for every clip.
+- **Website**: the landing page has a light (vellum) version that follows the theme switch; the
+  caution tapes scroll in a seamless loop at any screen width; the headline no longer runs into
+  the hard hat on very wide screens; the keyboard "skip to content" link works.
+- **Demo**: has the light version too, follows the theme chosen on the docs site, and has its
+  own theme switch that the docs site remembers.
+- Zone names with `&` are shown correctly on the zone editor's image.
+- The zone editor shows a clear message, not a broken image, when a camera gives no frame.
+- **Reports**: only the Note column is in red handwriting; compliance figures and counts in
+  the last column of other tables were styled as notes.
+
 ## 2.0.0
 
 A rewrite that turns the training project into a complete site-monitoring tool. The repository

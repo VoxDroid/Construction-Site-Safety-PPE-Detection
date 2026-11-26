@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import contextlib
 import queue
+import sys
 import tempfile
 import threading
 from collections import deque
@@ -37,8 +38,7 @@ def _probe() -> tuple[str, str, str, bool]:
     with tempfile.TemporaryDirectory() as d:
         for ext, cc, mime, playable in _CANDIDATES:
             p = Path(d) / f"probe{ext}"
-            with _quiet_opencv():
-                w = cv2.VideoWriter(str(p), cv2.VideoWriter_fourcc(*cc), 5, (320, 240))
+            w = _new_writer(p, cc, 5, (320, 240))
             ok = w.isOpened()
             if ok:
                 for _ in range(3):
@@ -73,6 +73,23 @@ def _quiet_opencv():
         cv2.utils.logging.setLogLevel(old)
 
 
+def _new_writer(path: Path, fourcc: str, fps: float, size: tuple[int, int]) -> cv2.VideoWriter:
+    """Open a writer, asking Windows' own H.264 encoder first.
+
+    Through FFmpeg, OpenCV first tries Cisco's OpenH264 DLL, which is rarely installed, and
+    prints an error for every clip before falling back. Media Foundation is always there.
+    """
+    code = cv2.VideoWriter_fourcc(*fourcc)
+    if fourcc == "avc1" and sys.platform == "win32":
+        with _quiet_opencv():
+            w = cv2.VideoWriter(str(path), cv2.CAP_MSMF, code, fps, size)
+        if w.isOpened():
+            return w
+        w.release()
+    with _quiet_opencv():
+        return cv2.VideoWriter(str(path), code, fps, size)
+
+
 def open_writer(stem: Path, fps: float, size: tuple[int, int]) -> tuple[cv2.VideoWriter, Path, VideoFormat]:
     """Open a writer for ``stem`` + the best extension. ``size`` is (width, height).
 
@@ -82,8 +99,7 @@ def open_writer(stem: Path, fps: float, size: tuple[int, int]) -> tuple[cv2.Vide
     order = [first] + [VideoFormat(*c) for c in _CANDIDATES if c[1] != first.fourcc]
     for fmt in order:
         path = stem.with_suffix(fmt.ext)
-        with _quiet_opencv():
-            w = cv2.VideoWriter(str(path), cv2.VideoWriter_fourcc(*fmt.fourcc), max(fps, 1.0), size)
+        w = _new_writer(path, fmt.fourcc, max(fps, 1.0), size)
         if w.isOpened():
             return w, path, fmt
         w.release()

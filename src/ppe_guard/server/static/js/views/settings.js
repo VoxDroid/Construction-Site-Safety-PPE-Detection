@@ -22,7 +22,7 @@ function formPage(title, desc, body) {
 const PAGES = {
   general: () => formPage("General", "Site details and how long data is kept.", html`
     <div class="field-grid">
-      <label class="field">Site name<input name="general.site_name" maxlength="80" required><span class="hint">Shown in the sidebar, reports and alerts.</span></label>
+      <label class="field">Site name<input name="general.site_name" maxlength="80" required pattern=".*\\S.*" title="Type at least one letter or digit"><span class="hint">Shown in the sidebar, reports and alerts.</span></label>
       ${num("storage.retention_days", "Keep violations for (days)", 'min="0" max="3650" step="1"', "0 keeps everything. Older violations, snapshots and clips are deleted hourly.")}
       ${num("analysis.max_upload_mb", "Largest upload for Analyze (MB)", 'min="1" max="10000" step="1"')}
       ${num("analysis.keep_jobs", "Analyze results to keep", 'min="1" max="500" step="1"')}
@@ -78,9 +78,9 @@ function cameraDialog(cam, onSaved) {
     <form id="cam-form">
       <div class="dialog-head"><h2>${isNew ? "Add camera" : `Edit ${cam.name}`}</h2><button type="button" class="icon-btn" data-close aria-label="Close">${icon("x")}</button></div>
       <div class="dialog-body stack">
-        <label class="field">Name<input name="name" required maxlength="80" placeholder="North gate" value="${cam.name}"></label>
+        <label class="field">Name<input name="name" required maxlength="80" pattern=".*\\S.*" title="Type at least one letter or digit" placeholder="North gate" value="${cam.name}"></label>
         <label class="field">ID<input name="id" required pattern="[a-z0-9][a-z0-9_\\-]{0,39}" placeholder="north-gate" value="${cam.id}" ${isNew ? "" : raw("readonly")}><span class="hint">Lowercase letters, digits, - and _. Cannot be changed later.</span></label>
-        <label class="field">Source<input name="source" required placeholder="0, /videos/site.mp4 or rtsp://user:pass@192.168.1.20/stream1" value="${cam.source}">
+        <label class="field">Source<input name="source" required pattern=".*\\S.*" title="Type at least one letter or digit" placeholder="0, /videos/site.mp4 or rtsp://user:pass@192.168.1.20/stream1" value="${cam.source}">
           <span class="hint"><b>0</b>, <b>1</b>… for webcams, a video file path on the server, or an <b>rtsp://</b>, <b>http://</b> stream URL.</span></label>
         <div class="row" style="gap:22px">
           <label class="check"><input type="checkbox" name="enabled" ${cam.enabled ? raw("checked") : ""}>Enabled</label>

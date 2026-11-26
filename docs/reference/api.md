@@ -25,7 +25,7 @@ curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/api/stats
 
 | Method | Path | Description |
 | --- | --- | --- |
-| GET | `/api/health` | `{"status": "ok", "version": "2.0.0"}`. Never needs a login. |
+| GET | `/api/health` | `{"status": "ok", "version": "2.0.1"}`. Never needs a login. |
 | GET | `/api/stats` | Open violations, today's count, unreviewed count, compliance today, workers in view, cameras running, last-24-hour breakdowns. |
 | GET | `/api/system` | Versions, compute device, video codec, disk usage. |
 | GET | `/api/models` | Available models and whether they are downloaded. |

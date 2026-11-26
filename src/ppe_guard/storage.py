@@ -63,6 +63,11 @@ def _local_midnight(ts: float) -> float:
     return datetime.fromtimestamp(ts).replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
 
 
+
+def _cell(value: str) -> str:
+    """Stop spreadsheet apps from running text typed by users as a formula (CSV injection)."""
+    return "'" + value if value[:1] in ("=", "+", "-", "@", "\t", "\r") else value
+
 class Storage:
     def __init__(self, data_dir: Path) -> None:
         self.data_dir = data_dir
@@ -478,8 +483,8 @@ class Storage:
                     "ended", "duration_s", "acknowledged", "note", "snapshots", "clip"])
         iso = lambda t: datetime.fromtimestamp(t).isoformat(timespec="seconds") if t else ""  # noqa: E731
         for v in data:
-            w.writerow([v["id"], v["kind"], v["camera_id"], v["camera_name"], v["worker_key"],
-                        "|".join(v["missing"]), v["zone_name"] or "", iso(v["started_at"]),
-                        iso(v["ended_at"]), v["duration"], v["acknowledged"], v["note"] or "",
+            w.writerow([v["id"], v["kind"], v["camera_id"], _cell(v["camera_name"]), _cell(v["worker_key"]),
+                        "|".join(v["missing"]), _cell(v["zone_name"] or ""), iso(v["started_at"]),
+                        iso(v["ended_at"]), v["duration"], v["acknowledged"], _cell(v["note"] or ""),
                         v["snapshot_count"], v["clip"] or ""])
         return buf.getvalue()

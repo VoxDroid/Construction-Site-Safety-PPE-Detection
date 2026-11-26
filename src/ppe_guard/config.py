@@ -11,9 +11,12 @@ import os
 import re
 import threading
 from pathlib import Path
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field, ValidationError, field_validator
+from pydantic import BaseModel, Field, StringConstraints, ValidationError, field_validator
+
+# Names typed by people: surrounding spaces are dropped, so "   " is not a valid name.
+Text = Annotated[str, StringConstraints(strip_whitespace=True)]
 
 
 class RequiredPPE(BaseModel):
@@ -100,7 +103,7 @@ class Zone(BaseModel):
     """
 
     id: str = Field(..., description="Short slug, unique per camera.")
-    name: str = Field(..., min_length=1, max_length=60, description="Shown on the video and in violations.")
+    name: Text = Field(..., min_length=1, max_length=60, description="Shown on the video and in violations.")
     kind: Literal["ppe", "restricted"] = Field(
         "ppe", description="'ppe': check PPE inside. 'restricted': nobody may enter."
     )
@@ -130,8 +133,8 @@ class Zone(BaseModel):
 
 class CameraConfig(BaseModel):
     id: str = Field(..., description="Short slug, e.g. 'gate-north'.")
-    name: str = Field(..., min_length=1, max_length=80, description="Display name.")
-    source: str = Field(..., min_length=1, description="Webcam index ('0'), file path, or rtsp/http URL.")
+    name: Text = Field(..., min_length=1, max_length=80, description="Display name.")
+    source: Text = Field(..., min_length=1, description="Webcam index ('0'), file path, or rtsp/http URL.")
     enabled: bool = Field(True, description="Disabled cameras cannot be started.")
     autostart: bool = Field(False, description="Start this camera when the server starts.")
     loop: bool = Field(True, description="Restart video files when they end.")
@@ -152,7 +155,7 @@ class CameraConfig(BaseModel):
 
 
 class GeneralSettings(BaseModel):
-    site_name: str = Field("My site", min_length=1, max_length=80,
+    site_name: Text = Field("My site", min_length=1, max_length=80,
                            description="Shown in the dashboard, reports and alerts.")
 
 

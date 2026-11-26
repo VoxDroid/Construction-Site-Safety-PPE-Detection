@@ -49,6 +49,14 @@ def test_filters_by_kind_and_zone_csv(tmp_path):
     assert any(",zone," in r and "Pit" in r for r in rows)
 
 
+
+def test_csv_does_not_let_notes_run_as_formulas(tmp_path):
+    s = Storage(tmp_path)
+    add(s, "f1")
+    s.acknowledge("f1", True, '=HYPERLINK("http://example.com","open")')
+    row = s.export_csv().strip().splitlines()[1]
+    assert "'=HYPERLINK" in row
+
 def test_bulk_ack_and_delete_remove_files(tmp_path):
     s = Storage(tmp_path)
     for i in range(3):

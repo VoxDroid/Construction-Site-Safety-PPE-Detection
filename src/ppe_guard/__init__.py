@@ -3,4 +3,4 @@
 from ppe_guard.compliance import ComplianceEngine, Detection, PPEItem
 
 __all__ = ["ComplianceEngine", "Detection", "PPEItem", "__version__"]
-__version__ = "2.0.0"
+__version__ = "2.0.1"

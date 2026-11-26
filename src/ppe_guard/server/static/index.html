@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PPE Guard</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#/live">
+      <img src="/static/favicon.svg" alt="" width="28" height="28">
+      <span>PPE Guard</span>
+    </a>
+    <nav class="tabs" aria-label="Main">
+      <a href="#/live" data-view="live">Live</a>
+      <a href="#/violations" data-view="violations">Violations</a>
+      <a href="#/settings" data-view="settings">Settings</a>
+    </nav>
+    <span id="conn" class="conn" title="Live connection">connecting…</span>
+  </header>
+
+  <section class="stats" aria-label="Summary">
+    <div class="stat danger"><span id="s-ongoing">–</span><label>Open violations</label></div>
+    <div class="stat"><span id="s-today">–</span><label>Violations today</label></div>
+    <div class="stat"><span id="s-workers">–</span><label>Workers in view</label></div>
+    <div class="stat"><span id="s-cams">–</span><label>Cameras running</label></div>
+    <div class="stat"><span id="s-unack">–</span><label>Unreviewed</label></div>
+  </section>
+
+  <main>
+    <!-- LIVE -->
+    <section id="view-live" class="view" hidden>
+      <div class="live-layout">
+        <div id="camera-grid" class="camera-grid"></div>
+        <aside class="panel feed">
+          <h2>Live events</h2>
+          <ol id="feed" class="feed-list"><li class="muted">No events yet.</li></ol>
+        </aside>
+      </div>
+    </section>
+
+    <!-- VIOLATIONS -->
+    <section id="view-violations" class="view" hidden>
+      <form id="filters" class="panel filters">
+        <label>Camera <select name="camera_id"><option value="">All</option></select></label>
+        <label>Missing <select name="item">
+          <option value="">Any</option><option value="helmet">Helmet</option>
+          <option value="vest">Vest</option><option value="mask">Mask</option></select></label>
+        <label>Period <select name="period">
+          <option value="86400">Last 24 h</option><option value="604800">Last 7 days</option>
+          <option value="2592000">Last 30 days</option><option value="">All time</option></select></label>
+        <label>Status <select name="ongoing">
+          <option value="">Any</option><option value="true">Ongoing</option><option value="false">Ended</option></select></label>
+        <label>Review <select name="acknowledged">
+          <option value="">Any</option><option value="false">Unreviewed</option><option value="true">Reviewed</option></select></label>
+        <label>Sort <select name="sort">
+          <option value="started_at">Newest</option><option value="duration">Longest</option>
+          <option value="camera_id">Camera</option></select></label>
+        <span class="spacer"></span>
+        <a id="export" class="btn" href="#">Export CSV</a>
+      </form>
+      <div class="panel table-wrap">
+        <table class="violations">
+          <thead><tr><th></th><th>Camera</th><th>Missing</th><th>Started</th><th>Duration</th><th>Status</th></tr></thead>
+          <tbody id="v-rows"></tbody>
+        </table>
+        <p id="v-empty" class="empty" hidden>No violations match these filters.</p>
+      </div>
+      <div class="pager"><button id="prev" class="btn">← Newer</button><span id="page-info"></span><button id="next" class="btn">Older →</button></div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section id="view-settings" class="view" hidden>
+      <form id="settings-form" class="settings-grid">
+        <fieldset class="panel">
+          <legend>Required PPE</legend>
+          <label class="toggle"><input type="checkbox" name="compliance.required_ppe.helmet"> Hard hat</label>
+          <label class="toggle"><input type="checkbox" name="compliance.required_ppe.vest"> Safety vest</label>
+          <label class="toggle"><input type="checkbox" name="compliance.required_ppe.mask"> Face mask</label>
+          <label class="toggle"><input type="checkbox" name="compliance.treat_unseen_as_missing"> Strict mode
+            <small>A required item that cannot be seen counts as missing.</small></label>
+        </fieldset>
+        <fieldset class="panel">
+          <legend>Timing</legend>
+          <label>Violation delay (s)<input type="number" step="0.5" min="0" name="compliance.violation_delay">
+            <small>How long an item must look missing before a violation opens.</small></label>
+          <label>Clear after (s)<input type="number" step="0.5" min="0" name="compliance.clear_after"></label>
+          <label>Forget worker after (s)<input type="number" step="0.5" min="0.1" name="compliance.lost_timeout"></label>
+          <label>Snapshot every (s)<input type="number" step="1" min="1" name="compliance.snapshot_interval"></label>
+          <label>Max snapshots / violation<input type="number" step="1" min="1" name="compliance.max_snapshots"></label>
+        </fieldset>
+        <fieldset class="panel">
+          <legend>Detection</legend>
+          <label>Model<input type="text" name="detection.weights" placeholder="auto">
+            <small>"auto", "ppe-yolo26s", "ppe-yolov8s" or a path to a .pt file. Restart cameras to apply.</small></label>
+          <label>Confidence<input type="number" step="0.05" min="0.05" max="1" name="detection.confidence"></label>
+          <label>IoU<input type="number" step="0.05" min="0.05" max="1" name="detection.iou"></label>
+          <label>Image size<input type="number" step="32" min="160" name="detection.imgsz"></label>
+          <label>Device<input type="text" name="detection.device" placeholder="auto (GPU if available)"></label>
+          <label>Tracker<select name="detection.tracker"><option>bytetrack.yaml</option><option>botsort.yaml</option></select></label>
+          <label>Max FPS per camera<input type="number" step="1" min="1" name="detection.max_fps"></label>
+          <label>Overlap to assign PPE<input type="number" step="0.05" min="0.05" max="1" name="compliance.min_overlap"></label>
+        </fieldset>
+        <fieldset class="panel">
+          <legend>Alerts</legend>
+          <label>Webhook URL<input type="url" name="alerts.webhook_url" placeholder="https://hooks.slack.com/…"></label>
+          <label>Format<select name="alerts.format"><option value="generic">Generic JSON</option><option value="slack">Slack</option><option value="discord">Discord</option></select></label>
+          <label>Cooldown per camera (s)<input type="number" step="5" min="0" name="alerts.cooldown"></label>
+          <label>Dashboard URL (for links in alerts)<input type="url" name="alerts.public_url" placeholder="https://ppe.example.com"></label>
+          <button type="button" id="test-alert" class="btn">Send test alert</button>
+        </fieldset>
+        <fieldset class="panel cameras-fs">
+          <legend>Cameras</legend>
+          <table class="cams"><thead><tr><th>ID</th><th>Name</th><th>Source</th><th>Enabled</th><th>Autostart</th><th>Loop files</th><th></th></tr></thead>
+            <tbody id="cam-rows"></tbody></table>
+          <button type="button" id="add-cam" class="btn">+ Add camera</button>
+          <small>Source: a webcam index (<code>0</code>), a video file path, or a stream URL (<code>rtsp://user:pass@host/stream</code>).</small>
+        </fieldset>
+        <div class="actions">
+          <button type="button" id="reset-settings" class="btn ghost">Reset to defaults</button>
+          <button type="submit" class="btn primary">Save settings</button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <dialog id="detail">
+    <form method="dialog" class="dialog-head"><h2 id="d-title">Violation</h2><button class="btn ghost" aria-label="Close">✕</button></form>
+    <div id="d-body"></div>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" hidden></div>
+  <script src="/static/app.js" type="module"></script>
+</body>
+</html>

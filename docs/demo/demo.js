@@ -13,7 +13,7 @@ const CLASS = {
 const REGIONS = { helmet: [-0.15, 0.45], mask: [-0.05, 0.5], vest: [0.1, 0.9] };
 const ITEMS = ["helmet", "vest", "mask"];
 const LABEL = { helmet: "Hard hat", vest: "Vest", mask: "Mask" };
-const COLORS = { violation: "#e5484d", compliant: "#30a46c", unknown: "#9b9a97" };
+const COLORS = { violation: "#ff5547", compliant: "#3fdc8a", unknown: "#a9c3e6" };
 
 const $ = (id) => document.getElementById(id);
 const canvas = $("canvas");
@@ -163,7 +163,7 @@ function evaluate(dets, required) {
 // ---- drawing ---------------------------------------------------------------------------------
 
 function label(text, x, y, color, scale) {
-  ctx.font = `600 ${Math.round(13 * scale)}px system-ui, sans-serif`;
+  ctx.font = `500 ${Math.round(12 * scale)}px "Plex Mono", monospace`;
   const w = ctx.measureText(text).width + 10 * scale, h = 20 * scale;
   y = Math.max(y, h);
   ctx.fillStyle = color;

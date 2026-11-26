@@ -28,6 +28,8 @@ was renamed from `Construction-Site-Safety-PPE-Detection` to `ppe-guard`; old li
   limiting. `PPE_GUARD_PASSWORD` for containers.
 - **Any video source**: webcams, video files (optionally looped) and RTSP/HTTP streams, many
   cameras at once, with automatic reconnect.
+- **A visual identity of its own** ("the drawing set"): blueprint and vellum themes, stencil type,
+  title-block KPIs, rubber-stamp statuses and red-pen markup, used by the dashboard, the website and the demo.
 - **New dashboard**: live view with per-worker status, camera pages, violations with filters,
   bulk review and a detail view with clip and snapshots, settings for everything, light and dark
   themes and a phone layout. No build step.

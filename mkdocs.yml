@@ -8,25 +8,27 @@ copyright: MIT License · Model weights derive from Ultralytics YOLO (AGPL-3.0) 
 
 theme:
   name: material
-  logo: assets/favicon.svg
+  custom_dir: docs/overrides
+  logo: assets/logo.svg
   favicon: assets/favicon.svg
+  font: false
   icon:
     repo: fontawesome/brands/github
   palette:
-    - media: "(prefers-color-scheme: light)"
-      scheme: default
-      primary: amber
-      accent: amber
-      toggle:
-        icon: material/weather-night
-        name: Switch to dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: amber
-      accent: amber
+      primary: custom
+      accent: custom
       toggle:
         icon: material/weather-sunny
         name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
   features:
     - navigation.tabs
     - navigation.sections

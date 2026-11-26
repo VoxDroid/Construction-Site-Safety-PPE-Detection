@@ -13,7 +13,7 @@ function workersTable(workers) {
     <tbody>${rows.map((w) => html`<tr>
       <td>${workerName(w.key)}</td>
       <td><span class="pill ${cls[w.state]}">${STATE_LABEL[w.state]}</span></td>
-      <td>${w.required.length ? w.required.map((i) => html`<div class="row" style="gap:6px">${ITEM_LABEL[i]} ${mark[w.items[i]]}</div>`) : html`<span class="muted">nothing</span>`}</td>
+      <td>${w.required.length ? w.required.map((i) => html`<div class="row" style="gap:7px;margin:2px 0"><svg class="sign" style="width:18px;height:18px"><use href="#i-sign-${i}"/></svg>${ITEM_LABEL[i]} ${mark[w.items[i]]}</div>`) : html`<span class="muted">nothing</span>`}</td>
       <td>${w.intrusion ? html`<span class="pill bad">${w.intrusion}</span>` : w.zones.length ? w.zones.join(", ") : html`<span class="muted">–</span>`}</td>
     </tr>`)}</tbody></table></div>`;
 }
@@ -26,6 +26,7 @@ export async function mount(main, [id]) {
       <a class="crumb" href="#/live">${icon("back", "ic-sm")}Live</a>
       <div class="page-head">
         <div>
+          <div class="eyebrow">Detail · Camera</div>
           <h1 class="row">${cam.name} <span data-status>${statusPill(cam.status)}</span></h1>
           <p class="mono">${cam.source.match(/^\d+$/) ? `Webcam ${cam.source}` : cam.source.split(/[\\/]/).pop()}${cam.weights ? ` · ${cam.weights}` : ""}${cam.frame_size ? ` · ${cam.frame_size[0]}×${cam.frame_size[1]}` : ""} · <span data-fps>${running ? `${cam.fps} fps` : ""}</span></p>
         </div>
@@ -46,12 +47,12 @@ export async function mount(main, [id]) {
               : html`<div class="placeholder">${icon("live")}<div>Camera stopped</div></div>`}</div>
           </div>
           <section class="card">
-            <div class="card-head"><h2>Workers in view</h2><span class="muted small" id="wcount"></span></div>
+            <div class="card-head"><h2>${icon("users")}Workers in view</h2><span class="muted small" id="wcount"></span></div>
             <div id="workers">${workersTable(cam.workers || [])}</div>
           </section>
         </div>
         <section class="card">
-          <div class="card-head"><h2>Recent violations</h2><a class="small muted" href="#/violations?camera_id=${cam.id}">See all</a></div>
+          <div class="card-head"><h2>${icon("alert")}Recent violations</h2><a class="small muted" href="#/violations?camera_id=${cam.id}">See all</a></div>
           <div id="recent"></div>
         </section>
       </div>`);

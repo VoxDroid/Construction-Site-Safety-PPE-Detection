@@ -29,7 +29,7 @@ const PAGES = {
     </div>`),
   detection: (models) => formPage("Detection and PPE rules", "What counts as a violation, and how the model runs. Changes apply to running cameras within a second, except the model, which needs a camera restart.", html`
     <h3>Required PPE</h3>
-    <div class="row" style="gap:22px">${check("compliance.required_ppe.helmet", "Hard hat")}${check("compliance.required_ppe.vest", "Safety vest")}${check("compliance.required_ppe.mask", "Face mask")}</div>
+    <div class="row" style="gap:26px">${check("compliance.required_ppe.helmet", raw('<span class="row-tight" style="gap:8px"><svg class="sign"><use href="#i-sign-helmet"/></svg>Hard hat</span>'))}${check("compliance.required_ppe.vest", raw('<span class="row-tight" style="gap:8px"><svg class="sign"><use href="#i-sign-vest"/></svg>Safety vest</span>'))}${check("compliance.required_ppe.mask", raw('<span class="row-tight" style="gap:8px"><svg class="sign"><use href="#i-sign-mask"/></svg>Face mask</span>'))}</div>
     <p class="muted small">PPE zones on a camera can override this for their area.</p>
     <h3>Timing</h3>
     <div class="field-grid">
@@ -197,20 +197,20 @@ async function systemPage(el) {
   const s = await api("/api/system");
   const st = s.storage;
   render(el, html`<div class="grid-2">
-    <section class="card"><div class="card-head"><h2>Software</h2></div><div class="card-pad"><dl class="meta">
+    <section class="card"><div class="card-head"><h2>${icon("cpu")}Software</h2></div><div class="card-pad"><dl class="meta">
       <dt>PPE Guard</dt><dd>${s.version}</dd><dt>Python</dt><dd>${s.python} (${s.platform})</dd>
       <dt>PyTorch</dt><dd>${s.torch || "–"}</dd><dt>Ultralytics</dt><dd>${s.ultralytics || "–"}</dd>
       <dt>Compute</dt><dd>${s.device}</dd>
       <dt>Video codec</dt><dd>${s.video_codec.fourcc} (${s.video_codec.mime})${s.video_codec.playable ? "" : " · not playable in browsers"}</dd>
       <dt>Live viewers</dt><dd>${s.websocket_clients}</dd>
     </dl></div></section>
-    <section class="card"><div class="card-head"><h2>Storage</h2></div><div class="card-pad"><dl class="meta">
+    <section class="card"><div class="card-head"><h2>${icon("disk")}Storage</h2></div><div class="card-pad"><dl class="meta">
       <dt>Data folder</dt><dd class="mono" style="word-break:break-all">${s.data_dir}</dd>
       <dt>Database</dt><dd>${fmtBytes(st.database_bytes)}</dd><dt>Snapshots</dt><dd>${fmtBytes(st.snapshots_bytes)}</dd>
       <dt>Clips</dt><dd>${fmtBytes(st.clips_bytes)}</dd><dt>Analyze results</dt><dd>${fmtBytes(st.analysis_bytes)}</dd>
       <dt>Free disk</dt><dd>${fmtBytes(st.disk_free_bytes)} of ${fmtBytes(st.disk_total_bytes)}</dd>
     </dl></div></section>
-    <section class="card" style="grid-column:1/-1"><div class="card-head"><h2>API</h2></div><div class="card-pad">
+    <section class="card" style="grid-column:1/-1"><div class="card-head"><h2>${icon("external")}API</h2></div><div class="card-pad">
       <p>Interactive API documentation is at <a href="/docs">/docs</a> (OpenAPI schema at <a href="/openapi.json">/openapi.json</a>).</p>
     </div></section>
   </div>`);
@@ -219,7 +219,7 @@ async function systemPage(el) {
 export async function mount(main, [tab = "general"]) {
   if (!TABS.some(([k]) => k === tab)) tab = "general";
   render(main, html`
-    <div class="page-head"><div><h1>Settings</h1><p>Saved to <code>settings.json</code> in the data folder.</p></div></div>
+    <div class="page-head"><div><div class="eyebrow">Sheet S-01 · System</div><h1>Settings</h1><p>Saved to <code>settings.json</code> in the data folder.</p></div></div>
     <nav class="tabs">${TABS.map(([k, label]) => html`<a href="#/settings/${k}" class="${k === tab ? "active" : ""}">${label}</a>`)}</nav>
     <div id="page"></div>`);
   const el = $("#page", main);

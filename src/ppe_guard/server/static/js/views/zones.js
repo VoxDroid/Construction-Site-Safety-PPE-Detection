@@ -21,7 +21,7 @@ export async function mount(main, [id]) {
   render(main, html`
     <a class="crumb" href="#/cameras/${cam.id}">${icon("back", "ic-sm")}${cam.name}</a>
     <div class="page-head">
-      <div><h1>Zones · ${cam.name}</h1>
+      <div><div class="eyebrow">Detail · Zone plan</div><h1>Zones · ${cam.name}</h1>
         <p>PPE is only checked inside <b>PPE zones</b> (or everywhere if there are none). Anyone who stays in a <b>no-entry zone</b> raises a violation. A worker's position is where their feet are.</p></div>
       <div class="actions">
         <button class="btn" id="add-ppe">${icon("plus", "ic-sm")}PPE zone</button>
@@ -38,9 +38,9 @@ export async function mount(main, [id]) {
         <div class="row small muted" id="hint">Loading a frame from the camera…</div>
       </div>
       <aside class="stack">
-        <section class="card"><div class="card-head"><h2>Zones</h2><span class="muted small" id="zcount"></span></div>
+        <section class="card"><div class="card-head"><h2>${icon("layers")}Zones</h2><span class="muted small" id="zcount"></span></div>
           <div class="card-pad"><div class="zone-list" id="list"></div></div></section>
-        <section class="card" id="editor-card"><div class="card-head"><h2>Selected zone</h2></div><div class="card-pad" id="editor"></div></section>
+        <section class="card" id="editor-card"><div class="card-head"><h2>${icon("edit")}Selected zone</h2></div><div class="card-pad" id="editor"></div></section>
       </aside>
     </div>`);
 

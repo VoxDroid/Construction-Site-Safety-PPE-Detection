@@ -117,8 +117,16 @@ window.addEventListener("hashchange", route);
   } catch (e) { errorToast(e); }
   connect();
   refreshBadge();
-  setInterval(refreshBadge, 15000);
-  bus.on((m) => { if (m.type === "violation" && m.event === "opened") refreshBadge(); });
+  setInterval(refreshBadge, 10000);
+  bus.on((m) => {
+    if ((m.type === "violation" && m.event !== "updated") || m.type === "camera") refreshBadge();
+  });
+  const clock = () => {
+    const d = new Date();
+    $("#sb-clock").textContent = `${d.toLocaleDateString([], { weekday: "short", day: "2-digit", month: "short" })}  ${d.toLocaleTimeString([], { hour12: false })}`;
+  };
+  clock();
+  setInterval(clock, 1000);
   route();
 })();
 

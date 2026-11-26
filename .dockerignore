@@ -1,0 +1,16 @@
+.git
+.github
+.venv
+venv
+**/__pycache__
+*.pyc
+data
+datasets
+models
+runs
+samples
+training
+docs
+tests
+*.pt
+*.onnx

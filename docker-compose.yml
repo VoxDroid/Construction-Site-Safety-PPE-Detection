@@ -1,0 +1,27 @@
+services:
+  ppe-guard:
+    build: .
+    image: ppe-guard:latest
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/data       # settings, violation database, snapshots
+      - ./models:/models   # model weights (downloaded on first start if missing)
+    restart: unless-stopped
+
+    # USB webcam (Linux): uncomment and add a camera with source "0" in Settings.
+    # devices:
+    #   - /dev/video0:/dev/video0
+    # group_add:
+    #   - video
+
+    # NVIDIA GPU: build with
+    #   docker compose build --build-arg TORCH_INDEX=https://download.pytorch.org/whl/cu128
+    # and uncomment (requires the NVIDIA Container Toolkit):
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]

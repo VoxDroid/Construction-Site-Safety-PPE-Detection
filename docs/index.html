@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PPE Guard | Construction site PPE detection</title>
+  <meta name="description" content="Open-source, real-time PPE compliance monitoring for construction sites. YOLO detection, per-worker tracking, violation snapshots, alerts and a web dashboard.">
+  <meta property="og:title" content="PPE Guard">
+  <meta property="og:description" content="Real-time PPE compliance monitoring for construction sites, judged per worker.">
+  <meta property="og:image" content="assets/ppe.webp">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <style>
+    :root {
+      --bg: #ffffff; --bg-2: #f5f6f8; --text: #1c2025; --muted: #5b6472; --border: #e2e5ea;
+      --accent: #f5b700; --ink: #1c2025; --ok: #2e9e4f; --bad: #d93a3a; --code: #f0f2f5;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #111418; --bg-2: #181c22; --text: #e6e8eb; --muted: #98a2b3; --border: #2a3039; --code: #1f242c;
+      }
+    }
+    :root[data-theme="dark"] { --bg: #111418; --bg-2: #181c22; --text: #e6e8eb; --muted: #98a2b3; --border: #2a3039; --code: #1f242c; }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    a { color: inherit; }
+    img { max-width: 100%; display: block; }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 0 16px; }
+    nav { position: sticky; top: 0; z-index: 5; background: #1c2025; color: #fff; }
+    nav .wrap { display: flex; align-items: center; gap: 20px; height: 56px; }
+    nav .brand { display: flex; gap: 10px; align-items: center; font-weight: 700; text-decoration: none; }
+    nav .links { margin-left: auto; display: flex; gap: 18px; font-size: 14px; }
+    nav .links a { text-decoration: none; color: #c7ccd4; }
+    nav .links a:hover { color: #fff; }
+    .hero { background: #1c2025; color: #fff; padding: 56px 0 72px; }
+    .hero .wrap { display: grid; grid-template-columns: 1.05fr 1fr; gap: 48px; align-items: center; }
+    .eyebrow { color: var(--accent); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; font-size: 13px; }
+    h1 { font-size: clamp(34px, 5vw, 52px); line-height: 1.08; margin: 10px 0 18px; }
+    .hero p { color: #c7ccd4; font-size: 18px; margin: 0 0 28px; }
+    .btns { display: flex; gap: 12px; flex-wrap: wrap; }
+    .btn { display: inline-block; padding: 12px 20px; border-radius: 10px; font-weight: 600; text-decoration: none; border: 1px solid #3a414c; }
+    .btn.primary { background: var(--accent); color: var(--ink); border-color: var(--accent); }
+    .hero img { border-radius: 14px; box-shadow: 0 20px 60px rgba(0,0,0,.45); }
+    section { padding: 72px 0; }
+    section.alt { background: var(--bg-2); }
+    h2 { font-size: 30px; margin: 0 0 8px; }
+    .lead { color: var(--muted); margin: 0 0 36px; max-width: 720px; }
+    .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+    .card { background: var(--bg); border: 1px solid var(--border); border-radius: 14px; padding: 22px; }
+    .alt .card { background: var(--bg); }
+    .card h3 { margin: 0 0 6px; font-size: 17px; }
+    .card p { margin: 0; color: var(--muted); font-size: 15px; }
+    .icon { width: 36px; height: 36px; border-radius: 9px; background: color-mix(in srgb, var(--accent) 22%, transparent); display: grid; place-items: center; margin-bottom: 12px; font-size: 18px; }
+    .steps { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; counter-reset: s; }
+    .step { border: 1px solid var(--border); border-radius: 12px; padding: 16px; background: var(--bg); position: relative; }
+    .step::before { counter-increment: s; content: counter(s); position: absolute; top: -12px; left: 14px; background: var(--accent); color: var(--ink); width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 13px; }
+    .step h3 { margin: 6px 0 4px; font-size: 15px; }
+    .step p { margin: 0; font-size: 14px; color: var(--muted); }
+    .shots { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
+    .shots figure { margin: 0; }
+    .shots img { border-radius: 12px; border: 1px solid var(--border); }
+    .shots figcaption { font-size: 13px; color: var(--muted); margin-top: 6px; }
+    .shots .stack { display: grid; gap: 16px; }
+    table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+    th { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+    .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); }
+    pre { background: var(--code); border: 1px solid var(--border); border-radius: 12px; padding: 18px; overflow-x: auto; font-size: 14px; line-height: 1.55; margin: 0; }
+    code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .two { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+    .note { border-left: 4px solid var(--accent); padding: 12px 16px; background: var(--bg-2); border-radius: 0 10px 10px 0; color: var(--muted); font-size: 15px; }
+    footer { padding: 32px 0; color: var(--muted); font-size: 14px; border-top: 1px solid var(--border); }
+    footer .wrap { display: flex; gap: 16px; flex-wrap: wrap; justify-content: space-between; }
+    @media (max-width: 900px) {
+      .hero .wrap, .two, .shots { grid-template-columns: 1fr; }
+      .grid { grid-template-columns: 1fr 1fr; }
+      .steps { grid-template-columns: 1fr 1fr; row-gap: 24px; }
+    }
+    @media (max-width: 600px) {
+      nav .links a:not(.gh) { display: none; }
+      .grid, .steps { grid-template-columns: 1fr; }
+      section { padding: 52px 0; }
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="wrap">
+      <a class="brand" href="#"><img src="assets/favicon.svg" alt="" width="26" height="26"> PPE Guard</a>
+      <div class="links">
+        <a href="#features">Features</a>
+        <a href="#how">How it works</a>
+        <a href="#results">Results</a>
+        <a href="#start">Get started</a>
+        <a class="gh" href="https://github.com/VoxDroid/Construction-Site-Safety-PPE-Detection">GitHub</a>
+      </div>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div class="wrap">
+      <div>
+        <div class="eyebrow">Open source · MIT</div>
+        <h1>Know who's missing their hard hat, as it happens.</h1>
+        <p>PPE Guard watches your site cameras, checks every worker for hard hats, hi-vis vests and masks, and turns that into a short list of reviewable incidents with snapshots and instant alerts.</p>
+        <div class="btns">
+          <a class="btn primary" href="#start">Get started</a>
+          <a class="btn" href="https://github.com/VoxDroid/Construction-Site-Safety-PPE-Detection">View on GitHub</a>
+        </div>
+      </div>
+      <img src="assets/demo.gif" alt="Detection boxes around workers' hard hats and vests on a construction site" width="560">
+    </div>
+  </header>
+
+  <section id="features">
+    <div class="wrap">
+      <h2>Built for the site office, not just the lab</h2>
+      <p class="lead">A detector alone gives you thousands of boxes per minute. PPE Guard turns them into decisions a supervisor can act on.</p>
+      <div class="grid">
+        <div class="card"><div class="icon">👷</div><h3>Per-worker verdicts</h3><p>Each hard hat and vest is matched to the person wearing it. A helmet nearby doesn't make a bare-headed worker look compliant.</p></div>
+        <div class="card"><div class="icon">⏱️</div><h3>No flicker alarms</h3><p>Workers are tracked across frames, and an item must look missing for a set time before a violation opens.</p></div>
+        <div class="card"><div class="icon">📷</div><h3>Any camera</h3><p>Webcams, recorded video and RTSP IP cameras, several at once, with automatic reconnects.</p></div>
+        <div class="card"><div class="icon">🗂️</div><h3>Evidence and audit trail</h3><p>Snapshots for every incident, review notes, filters and CSV export for your safety records.</p></div>
+        <div class="card"><div class="icon">🔔</div><h3>Instant alerts</h3><p>Webhooks to Slack, Discord or your own system, with per-camera cooldowns so nobody gets spammed.</p></div>
+        <div class="card"><div class="icon">🐳</div><h3>Easy to deploy</h3><p>One pip install or one Docker command. Runs on CPU or NVIDIA GPU, with a REST and WebSocket API.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="how" class="alt">
+    <div class="wrap">
+      <h2>How it works</h2>
+      <p class="lead">Five stages run for every camera frame.</p>
+      <div class="steps">
+        <div class="step"><h3>Detect</h3><p>A fine-tuned YOLO model finds people, hard hats, vests, masks and their "NO-" counterparts.</p></div>
+        <div class="step"><h3>Track</h3><p>ByteTrack gives each person a stable ID across frames.</p></div>
+        <div class="step"><h3>Assign</h3><p>PPE boxes are matched to people by overlap and body region (head or torso).</p></div>
+        <div class="step"><h3>Smooth</h3><p>Each worker's recent history decides whether an item is really missing.</p></div>
+        <div class="step"><h3>Act</h3><p>Violations are logged with snapshots, pushed live to the dashboard and sent as alerts.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <h2>The dashboard</h2>
+      <p class="lead">Live views, a review queue and settings in one lightweight web app with no build step.</p>
+      <div class="shots">
+        <figure><img src="assets/dashboard-live.png" alt="Live view with annotated camera stream and per-worker status chips" loading="lazy"><figcaption>Live view: every worker's ID and PPE status, plus a live event feed.</figcaption></figure>
+        <div class="stack">
+          <figure><img src="assets/dashboard-violations.png" alt="Violations table with snapshots and filters" loading="lazy"><figcaption>Review violations with snapshots, notes and CSV export.</figcaption></figure>
+          <figure><img src="assets/dashboard-settings.png" alt="Settings for required PPE, timing, detection and alerts" loading="lazy"><figcaption>Choose the required PPE, timing, alerts and cameras per site.</figcaption></figure>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="results" class="alt">
+    <div class="wrap">
+      <h2>Model results</h2>
+      <p class="lead">Both models are trained on the <a href="https://universe.roboflow.com/roboflow-universe-projects/construction-site-safety">Construction Site Safety dataset</a> (CC BY 4.0) for 200 epochs at 640 px, then measured on a held-out test split that was never used for training or model selection.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Model</th><th>Test precision</th><th>Test recall</th><th>Test mAP50</th><th>Test mAP50-95</th></tr></thead>
+          <tbody>
+            {{PAGES_ROWS}}
+          </tbody>
+        </table>
+      </div>
+      <p class="note" style="margin-top:20px">PPE Guard supports safety decisions. It is not a certified safety system. Expect some missed and false detections, keep a person in the loop, and follow your local rules on workplace video monitoring.</p>
+    </div>
+  </section>
+
+  <section id="start">
+    <div class="wrap two">
+      <div>
+        <h2>Get started</h2>
+        <p class="lead">Python 3.10+ and, for live video, ideally an NVIDIA GPU.</p>
+<pre><code>git clone https://github.com/VoxDroid/Construction-Site-Safety-PPE-Detection.git
+cd Construction-Site-Safety-PPE-Detection
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
+pip install -e .
+ppe-guard weights download
+
+# check a photo or video
+ppe-guard predict site.jpg --save out/
+
+# run the dashboard on http://localhost:8000
+ppe-guard serve</code></pre>
+      </div>
+      <div>
+        <h2>Or with Docker</h2>
+        <p class="lead">Settings, the database and snapshots persist in <code>./data</code>.</p>
+<pre><code>docker compose up -d --build</code></pre>
+        <h2 style="margin-top:36px">Train your own</h2>
+        <p class="lead">Download the dataset, then fine-tune any Ultralytics detector.</p>
+<pre><code>ppe-guard dataset download
+ppe-guard train --model yolo26s.pt
+ppe-guard val --split test</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">
+      <span>PPE Guard · MIT License · Detection by Ultralytics (AGPL-3.0)</span>
+      <span><a href="https://github.com/VoxDroid/Construction-Site-Safety-PPE-Detection">GitHub</a> · <a href="https://github.com/VoxDroid/Construction-Site-Safety-PPE-Detection/issues">Issues</a> · <a href="https://ko-fi.com/izeno">Support the project</a></span>
+    </div>
+  </footer>
+</body>
+</html>

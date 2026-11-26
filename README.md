@@ -1,481 +1,284 @@
-# PPE Detection for Construction Site Safety using YoloV8
-![Alt text](assets/videoconstruc2.gif)
-> 4,764 workers died on the job in 2020 (3.4 per 100,000 full-time equivalent workers). Workers in transportation and material moving occupations and construction and extraction occupations accounted for nearly half of all fatal occupational injuries (47.4 percent), representing 1,282 and 976 workplace deaths, respectively. 
->
-> *Occupational Safety and Health Administration (US Department of Labour)*
+<div align="center">
 
+# PPE Guard
 
-## Introduction
+**Real-time PPE compliance monitoring for construction sites.**
+It spots workers without hard hats or hi-vis vests, judges each worker separately, keeps snapshot evidence and sends alerts.
 
-### Problem Statement
-Construction site safety is a critical concern in the industrial sector. According to the **U.S. Occupational Safety and Health Administration (OSHA)**:
-- **4,764 workers** died on the job in 2020 (3.4 per 100,000 full-time equivalent workers)
-- **Workers in transportation, material moving, and construction** accounted for nearly **47.4% of fatal occupational injuries**
-- **Construction and extraction workers** experienced **976 workplace deaths** in a single year
+[![CI](https://github.com/VoxDroid/Construction-Site-Safety-PPE-Detection/actions/workflows/ci.yml/badge.svg)](https://github.com/VoxDroid/Construction-Site-Safety-PPE-Detection/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+![Python](https://img.shields.io/badge/python-3.10%E2%80%933.13-blue)
+![Models](https://img.shields.io/badge/models-YOLO26s%20%7C%20YOLOv8s-f5b700)
 
-The primary cause of many preventable injuries and fatalities is **inadequate or improper use of Personal Protective Equipment (PPE)**.
+[Website](https://voxdroid.github.io/Construction-Site-Safety-PPE-Detection/) ·
+[Quick start](#quick-start) ·
+[Dashboard](#the-dashboard) ·
+[Model results](#model-results) ·
+[Train your own](#training)
 
-### Solution
-This project leverages **state-of-the-art deep learning** with **YoloV8** to automatically detect and verify that construction workers are wearing appropriate PPE in real-time. The system can be deployed as:
-- **Automated safety monitoring** on construction sites
-- **Real-time alerting** when workers lack proper equipment
-- **Compliance reporting** and documentation
-- **Risk assessment** for different construction zones
+<img src="docs/assets/demo.gif" alt="Workers on a construction site with detection boxes around hard hats, vests and people" width="720">
 
-### Dataset
-This project utilizes the [**Construction Site Safety Image Dataset**](https://universe.roboflow.com/roboflow-universe-projects/construction-site-safety) provided by Roboflow, a comprehensive collection of annotated construction site images:
+</div>
 
-- **Total Samples**: 2,801 professionally annotated images
-- **Training Set**: 2,605 images for model training
-- **Validation Set**: 114 images for performance monitoring
-- **Test Set**: 82 images for final evaluation
-- **Annotation Format**: YOLO v8 format with normalized bounding box coordinates
+---
 
-### Detectable Classes
-The model is trained to detect **10 distinct classes** across construction sites:
+## Why
 
-| Safety Equipment | Non-Compliance | Scene Objects |
-|-----------------|-----------------|---------------|
-| **Hardhat** | NO-Hardhat | Person |
-| **Mask** | NO-Mask | Vehicle |
-| **Safety Vest** | NO-Safety Vest | Machinery |
-| **Safety Cone** | - | - |
+Construction is one of the most dangerous industries. In the US, construction and extraction workers
+accounted for **976 of the 4,764 fatal work injuries in 2020**
+([BLS Census of Fatal Occupational Injuries](https://www.bls.gov/news.release/archives/cfoi_12162021.htm)).
+Hard hats and high-visibility clothing are basic controls, but checking them all day across a busy
+site is hard to do by hand.
 
-This multi-class detection enables comprehensive safety monitoring and risk identification.
+PPE Guard watches existing cameras and flags workers who are missing required equipment. Site
+supervisors get a short, reviewable list of incidents with photos, not a wall of raw detections.
 
+> [!IMPORTANT]
+> PPE Guard is a decision-support tool, not a certified safety system. It will miss some
+> violations and raise some false alarms. Keep a human in the loop and follow your local rules on
+> workplace video monitoring and worker privacy.
 
-![](assets/ppe.webp)
+## Features
 
+- **Per-worker verdicts.** Hard hats, vests and masks are matched to the person wearing them,
+  using overlap plus a body-region check (head vs. torso). One worker's helmet can't make the
+  person next to them look compliant.
+- **Tracking with smoothing.** ByteTrack follows each person across frames. A violation opens
+  only after an item has looked missing for most of a configurable window (2 s by default), so a
+  single bad frame doesn't trigger an alert. It closes once the worker is compliant again or
+  leaves the frame.
+- **Any camera.** Webcams, video files and RTSP/HTTP IP cameras, several at once, with automatic
+  reconnect for streams.
+- **Evidence and review.** Every violation is stored with timestamped snapshots, can be marked
+  reviewed with a note, and can be exported to CSV for audits.
+- **Alerts.** Webhooks in generic JSON, Slack or Discord format, with a per-camera cooldown.
+- **Configurable rules.** Choose the required PPE per site (helmet, vest, mask), plus
+  timing, confidence and strict mode (anything not visible counts as missing).
+- **Runs anywhere.** One `pip install`, or Docker on CPU or an NVIDIA GPU. A REST and WebSocket
+  API lets you plug it into other systems.
+- **Reproducible training.** The dataset download, training, evaluation and export are all one
+  command each.
 
-## Setup
+## How it works
 
-The model was trained on a local machine with an **NVIDIA RTX 5060 Ti (16GB VRAM)**. We utilized the `ultralytics` library by [**Ultralytics**](https://docs.ultralytics.com) to run YoloV8 custom object detection on the dataset.
-
-### Training Configuration
-- **Model Architecture**: YoloV8s (Small variant for balanced performance)
-- **Total Epochs**: 200
-- **Batch Size**: 16
-- **Base Learning Rate**: 1e-3
-- **Optimizer**: Auto (Adaptive optimizer selection)
-- **Training Hardware**: NVIDIA RTX 5060 Ti with 16GB VRAM
-- **Training Duration**: Approximately 1.92 hours for 200 epochs
-
-### Key Technologies & Libraries
-- **Ultralytics YoloV8**: State-of-the-art real-time object detection framework
-- **PyTorch**: Deep learning framework backend
-- **OpenCV (cv2)**: Image processing and annotation visualization
-- **Pandas & Numpy**: Data manipulation and numerical operations
-- **Matplotlib & Seaborn**: Advanced data visualization and training analysis
-- **Flask**: Web deployment framework for the detection application
-
-**Note:** This repository contains all results, visualizations, trained models, inference code, and comprehensive deployment infrastructure for production-ready PPE detection.
-
-## Project Structure & Folders
-
-### **Model-Training/** - Training Infrastructure & Dataset
-
-Complete training pipeline with dataset and model artifacts.
-
-#### **Training Notebook:**
-- **`yolov8-finetuning-for-ppe-detection.ipynb`** (54 cells)
-  - Comprehensive Jupyter notebook implementing the complete training workflow
-  - **Data Loading & Preprocessing**:
-    - Loads dataset in YOLO format
-    - Validates image and label files
-    - Creates data.yaml configuration
-  - **Model Architecture Setup**:
-    - Initializes YoloV8s pre-trained model
-    - Configures transfer learning parameters
-    - Sets up training hyperparameters
-  - **Training Phase**:
-    - 200 epochs with batch size of 16
-    - Real-time loss and metric monitoring
-    - Early stopping patience of 25 epochs
-    - Learning rate scheduling with decay
-  - **Validation & Evaluation**:
-    - Per-epoch validation on 114 images
-    - Confusion matrix generation
-    - Per-class performance metrics
-  - **Visualization & Analysis**:
-    - Training curve plots (loss, mAP progression)
-    - Sample batch visualization
-    - Prediction examples on validation set
-    - Performance comparison graphs
-  - **Model Export**:
-    - Best model checkpointing
-    - Final model weights storage
-
-#### **Dataset Organization:**
-- **`Dataset/train/`** - Training Set (2605 images)
-  - `images/`: JPG format training images from construction sites
-  - `labels/`: Corresponding YOLO annotation files (.txt format)
-    - Format: `[class_id] [center_x] [center_y] [width] [height]` (normalized coordinates)
-    - Contains bounding box information for all PPE objects
-  
-- **`Dataset/valid/`** - Validation Set (114 images)
-  - `images/`: JPG format validation images
-  - `labels/`: YOLO format validation annotations
-  - Used for monitoring model performance during training
-  - Helps detect overfitting
-  
-- **`Dataset/test/`** - Test Set (82 images)
-  - `images/`: JPG format test images
-  - `labels/`: YOLO format test annotations
-  - Reserved for final model evaluation
-  - Represents unseen data for unbiased performance assessment
-
-#### **Training Outputs:**
-- **`Outputs/data.yaml`** - Dataset Configuration
-  ```yaml
-  path: ./Dataset
-  train: ./Dataset/train
-  val: ./Dataset/valid
-  test: ./Dataset/test
-  nc: 10
-  names: ['Hardhat', 'Mask', 'NO-Hardhat', 'NO-Mask', 'NO-Safety Vest', 
-          'Person', 'Safety Cone', 'Safety Vest', 'machinery', 'vehicle']
-  ```
-
-- **`Outputs/runs/detect/yolov8s_ppe_css_200_epochs/`** - Training Results
-  - `confusion_matrix.png`: Per-class detection accuracy heatmap
-  - `results.png`: Loss curves and metric progression across 200 epochs
-  - `train_batch*.jpg`: Sample detections from training batches
-  - `val_batch*_pred.jpg`: Model predictions on validation set
-  - `val_batch*_labels.jpg`: Ground truth labels for reference
-  - `results.csv`: Detailed epoch-by-epoch metrics
-
-- **`Outputstraining_log_df.csv`** - Complete Training Log
-  - 200 rows (one per epoch) with 15 metrics columns:
-    - `epoch`: Training epoch number (1-200)
-    - `time`: Cumulative training time
-    - `train/box_loss`: Bounding box regression loss
-    - `train/cls_loss`: Classification loss
-    - `train/dfl_loss`: Distribution focal loss
-    - `metrics/precision(B)`: Precision score
-    - `metrics/recall(B)`: Recall score
-    - `metrics/mAP50(B)`: mAP at 50% IoU threshold
-    - `metrics/mAP50-95(B)`: mAP across IoU 50-95%
-    - `val/box_loss`: Validation box loss
-    - `val/cls_loss`: Validation classification loss
-    - `val/dfl_loss`: Validation DFL loss
-    - `lr/pg0/pg1/pg2`: Learning rates for parameter groups
-  - Enables analysis of training dynamics and convergence
-
-#### **Pre-trained Model Weights:**
-- **`yolov8s.pt`** (45.2 MB)
-  - Pre-trained YoloV8 Small model on COCO dataset
-  - Used as starting point for transfer learning
-  - Contains learned feature representations from 80 COCO classes
-  
-- **`yolo11n.pt`** (Nano variant available)
-  - Lighter alternative for edge deployment
-  - Can be used for experiments with faster training
-
-### **Model-Deployment/** - Production-Ready Web Application
-
-A comprehensive Flask-based web application for real-time construction site PPE monitoring and compliance tracking.
-
-#### **Core Application Files:**
-
-- **`app.py`** (351 lines)
-  - Main Flask application server with SocketIO for real-time communication
-  - Implements video streaming routes with WebSocket support for live detection feeds
-  - Route handlers include:
-    - `/`: Main dashboard with live camera feed
-    - `/video_feed`: Video stream endpoint for real-time frame processing
-    - `/start_camera`: Start camera capture and detection
-    - `/stop_camera`: Stop camera and streaming
-    - `/get_stats`: Retrieve real-time detection statistics
-    - `/settings`: Display and manage configuration
-    - `/update_settings`: Apply new settings
-    - `/review`: Historical data review interface
-  - Implements threading for non-blocking video capture and processing
-  - Handles PPE compliance checking with configurable alerts
-  - Real-time statistics emission via WebSocket events
-  - Snapshot capture functionality for non-compliance documentation
-
-- **`detection_logic.py`** (237 lines)
-  - **InstanceDetector Class**: Core detection logic managing PPE compliance per worker instance
-    - Instance tracking with unique serial IDs
-    - Configurable PPE requirements (helmet, vest, mask)
-    - Non-compliance delay mechanism (prevents false alerts from single frames)
-    - Daily serial counter reset for tracking purposes
-    - Real-time compliance state management
-  - **ComplianceChecker Class**: Validates detected objects against required PPE standards
-    - Checks for presence/absence of specific PPE items
-    - Generates compliance status reports
-    - Calculates compliance percentages
-  - **SnapshotManager Class**: Handles snapshot capture and storage
-    - Automatic snapshot naming with timestamps
-    - Organized storage in `snapshots/` directory
-    - Snapshot metadata tracking
-
-- **`database.py`**
-  - SQLite database interface for persistent data storage
-  - Tables for:
-    - Detection history logs
-    - PPE compliance records
-    - Instance tracking data
-    - Alert logs with timestamps
-  - Query functions for historical analysis
-  - Automatic data persistence across sessions
-
-- **`settings.json`** - Configuration File
-  - **`required_ppe`**: Boolean flags for mandatory PPE
-    - `helmet`: Hardhat/safety helmet detection (default: true)
-    - `vest`: Safety vest detection (default: true)
-    - `mask`: Face mask detection (default: true)
-  - **`non_compliance_delay`**: Seconds to wait before flagging non-compliance (default: 3s)
-    - Prevents false alerts from momentary detection gaps
-  - **`instance_reset_timeout`**: Duration in seconds for instance timeout (default: 5s)
-    - Worker is considered a new instance if not detected for this duration
-
-- **`instance_counter.json`** - Persistent Counter Storage
-  - Tracks daily instance serial numbers
-  - Resets automatically at midnight
-  - Format: `{"date": "MM_DD_YYYY", "serial": 12345}`
-
-- **`detections.db`** - SQLite Database
-  - Persistent storage of all detection events
-  - Historical compliance data
-  - Alert records with timestamps
-  - Enables reporting and compliance auditing
-
-#### **Web Interface Templates:**
-
-- **`templates/index.html`** (619 lines) - Main Dashboard
-  - **Live Video Stream**: Real-time camera feed with overlay detection visualization
-    - Bounding boxes for detected objects
-    - Color-coded annotations (green=compliant, red=non-compliant)
-    - Confidence scores display
-  - **Detection Statistics Panel**:
-    - Real-time counter: Total detections, compliant instances, non-compliant instances
-    - Current status indicators with visual alerts
-    - Live graph of detection trends
-  - **Instance Tracking Display**:
-    - Current workers in frame
-    - PPE status per worker (helmet, vest, mask)
-    - Alert notifications for non-compliance
-  - **Control Panel**:
-    - Camera start/stop buttons
-    - Settings access link
-    - Review history link
-  - **Real-time Notifications**:
-    - WebSocket-powered live updates
-    - Audio/visual alerts for compliance violations
-    - Timestamp logging of all events
-  - **Professional UI Design**:
-    - Modern dashboard with Poppins font family
-    - Color-coded status indicators (green/red/orange)
-    - Responsive design for desktop viewing
-    - Clean information hierarchy
-
-- **`templates/settings.html`** (568 lines) - Configuration Interface
-  - **PPE Requirements Section**:
-    - Toggle switches for each PPE item requirement
-    - Real-time validation feedback
-    - Apply/save functionality
-  - **Detection Parameters**:
-    - Non-compliance delay slider (1-10 seconds)
-    - Instance timeout configuration
-    - Confidence threshold adjustment
-  - **System Status**:
-    - Current camera status
-    - Database information
-    - Model loading status
-  - **Save Configuration**:
-    - Persistent storage to settings.json
-    - Validation before saving
-    - Success/error notifications
-  - **Professional Settings UI**:
-    - Organized sections with icons
-    - Real-time feedback
-    - Form validation
-
-- **`templates/review.html`** - Historical Data Interface
-  - Review past detection records
-  - Compliance compliance reports
-
-#### **`snapshots/`** - Output Directory
-  - Automatically stores timestamped snapshots of non-compliance events
-  - Named format: `snapshot_YYYY-MM-DD_HH-MM-SS.jpg`
-  - Useful for compliance documentation and incident investigation
-  - Linked to database records for easy retrieval
-
-### **Model-Testing/** - Inference Testing & Validation
-
-Standalone scripts for comprehensive model validation and real-world testing without the web interface.
-
-- **`checker.py`** - Hardware checking
-  - Usage: `python checker.py`
-
-- **`test_cam.py`** - Real-time Camera Testing
-  - Directly accesses system camera for live detection testing
-  - Features:
-    - Real-time video feed with overlay detection
-    - Bounding boxes with class labels and confidence scores
-    - Color-coded annotations
-  - Usage: `python test_cam.py`
-
-- **`test_single.py`** - Single Image Inference
-  - Tests model on individual static images
-  - Features:
-    - Load image from file path
-    - Run inference with confidence thresholds
-    - Display results with bounding boxes and labels
-    - Debugging detection issues on particular scenarios
-  - Usage: `python test_single.py`
-
-### **assets/**
-Repository documentation assets:
-- Training visualizations, GIFs, and images used in README
-
-### **Root Files**
-- **`requirements.txt`**: Python package dependencies (Flask and related libraries)
-- **`README.md`**: Project documentation and usage guide
-- **`LICENSE`**: Project licensing information
-- **`bugs.txt`**: Known issues and bug tracking
-
-
-
-## Repository Structure
-
-```
-Construction-Site-Safety-PPE-Detection/
-├── Model-Training/
-│   ├── yolov8-finetuning-for-ppe-detection.ipynb    # Training pipeline notebook
-│   ├── Dataset/
-│   │   ├── train/
-│   │   │   ├── images/                               # 2605 training images
-│   │   │   └── labels/                               # YOLO format annotations
-│   │   ├── valid/
-│   │   │   ├── images/                               # 114 validation images
-│   │   │   └── labels/                               # Validation labels
-│   │   └── test/
-│   │       ├── images/                               # 82 test images
-│   │       └── labels/                               # Test labels
-│   ├── Outputs/
-│   │   ├── data.yaml                                 # Dataset configuration
-│   │   └── runs/detect/                              # Training results & plots
-│   ├── yolo11n.pt                                    # Pre-trained YoloV8 Nano
-│   ├── yolov8s.pt                                    # Pre-trained YoloV8 Small
-│   └── Outputstraining_log_df.csv                    # Training metrics log
-├── Model-Deployment/
-│   ├── app.py                                        # Flask web application
-│   ├── detection_logic.py                            # Inference engine
-│   ├── database.py                                   # Database operations
-│   ├── settings.json                                 # Configuration
-│   ├── instance_counter.json                         # Instance tracking
-│   ├── templates/
-│   │   ├── index.html                                # Main dashboard
-│   │   ├── review.html                               # Historical review
-│   │   └── settings.html                             # Settings interface
-│   └── snapshots/                                    # Detection outputs
-├── Model-Testing/
-│   ├── checker.py                                    # Hardware Checking
-│   ├── test_cam.py                                   # Real-time camera testing
-│   └── test_single.py                                # Single image testing
-├── assets/                                           # Documentation assets
-├── requirements.txt                                  # Dependencies
-├── README.md                                         # This file
-├── LICENSE                                           # License
-└── bugs.txt                                          # Known issues
+```mermaid
+flowchart LR
+    A[Camera / video / RTSP] --> B[YOLO detector<br/>10 classes]
+    B --> C[ByteTrack<br/>person IDs]
+    C --> D[Assign PPE to person<br/>overlap + body region]
+    D --> E[Per-worker history<br/>smoothing over N seconds]
+    E -->|missing long enough| F[Violation opened]
+    F --> G[(SQLite + snapshots)]
+    F --> H[Webhook alert]
+    F --> I[Live dashboard]
 ```
 
-## Training Results & Performance Metrics
+The detector recognises 10 classes: `Hardhat`, `NO-Hardhat`, `Safety Vest`, `NO-Safety Vest`,
+`Mask`, `NO-Mask`, `Person`, `Safety Cone`, `machinery` and `vehicle`. For every tracked person,
+each required item is **worn**, **missing** or **unknown** (not visible). A missing item has to
+persist for the violation delay before it counts.
 
-### Model Performance (200 Epochs)
+## Quick start
 
-The YoloV8s model underwent comprehensive training for **200 epochs** on the construction site safety dataset using an NVIDIA RTX 5060 Ti GPU. The training process completed in approximately **1.92 hours**, demonstrating efficient transfer learning.
+**Requirements:** Python 3.10 to 3.13. An NVIDIA GPU is recommended for live video. A CPU works
+for images and is usable on a single low-resolution stream.
 
-#### Final Metrics Achieved:
-| Metric | Value |
-|--------|-------|
-| **Precision** | 0.95 |
-| **Recall** | 0.7975 |
-| **mAP@50%** | 0.8767 |
-| **mAP@50-95%** | 0.6152 |
-
-#### Interpretation:
-- **Precision (0.95)**: Of all PPE detections made by the model, 95% are accurate. This indicates the model has excellent reliability in confirming actual PPE when it flags a detection.
-- **Recall (0.7975)**: The model identifies approximately 80% of all actual PPE instances in the dataset. This ensures good coverage while maintaining acceptable false negative rates.
-- **mAP@50%**: Strong performance at 87.67%, indicating robust detection across all 10 object classes at standard IoU threshold.
-- **mAP@50-95%**: Solid performance of 61.52% across stricter IoU thresholds, demonstrating good localization accuracy of bounding boxes.
-
-### Training Characteristics:
-- **Data Split**: Train: 2605 images | Valid: 114 images | Test: 82 images
-- **Batch Processing**: 16 images per batch
-- **Hardware Utilization**: NVIDIA RTX 5060 Ti efficiently processed batches with 16GB VRAM
-- **Convergence**: Model achieved plateau around epoch 150-180, with final epochs showing stability
-- **Classes Detected**: 10 PPE and non-PPE classes including Hardhat, Mask, Safety Vest, Person, Vehicle, Machinery, etc.
-
-### Visualization Results
-
-#### Confusion Matrix
-Shows the model's classification accuracy across all 10 PPE classes:
-
-![Alt text](Model-Training/Outputs/runs/detect/yolov8s_ppe_css_200_epochs/confusion_matrix.png)
-
-#### Training Batch Samples
-Visual examples of detected PPE during training batches:
-
-![Alt text](Model-Training/Outputs/runs/detect/yolov8s_ppe_css_200_epochs/train_batch30972.jpg)
-
-#### Validation Batch Predictions
-Model predictions on validation set with bounding boxes and confidence scores:
-
-![Alt text](Model-Training/Outputs/runs/detect/yolov8s_ppe_css_200_epochs/val_batch2_pred.jpg)
-
-#### Training Curves
-Loss and metric progression across all 200 epochs:
-
-![Alt text](Model-Training/Outputs/runs/detect/yolov8s_ppe_css_200_epochs/results.png)
-
-## Deployment & Usage
-
-### Web Application
-The `Model-Deployment/` directory contains a production-ready Flask web application that provides:
-- **Real-time Detection**: Live camera feed processing with instant PPE detection
-- **Web Dashboard**: User-friendly interface for monitoring detected instances
-- **Configuration Management**: Adjustable detection thresholds and settings
-- **Historical Tracking**: Review and analysis of detection history
-- **Data Persistence**: Instance counting and data storage capabilities
-
-### Local Testing
-Use the testing scripts in `Model-Testing/` to evaluate model performance:
 ```bash
-# Test with camera feed
-python Model-Testing/test_cam.py
+git clone https://github.com/VoxDroid/Construction-Site-Safety-PPE-Detection.git
+cd Construction-Site-Safety-PPE-Detection
+python -m venv .venv
+source .venv/bin/activate            # Windows: .venv\Scripts\activate
 
-# Test single image
-python Model-Testing/test_single.py
+# 1. Install PyTorch for your hardware (see https://pytorch.org/get-started/locally/)
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128   # NVIDIA GPU
+# pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu   # CPU only
 
-# Hardware Check
-python Model-Testing/checker.py
+# 2. Install PPE Guard
+pip install -e .
+
+# 3. Check your setup and fetch the trained model
+ppe-guard doctor
+ppe-guard weights download
 ```
 
-### Training Customization
-To retrain or fine-tune the model, use the notebook in `Model-Training/`:
+### Check an image, a folder or a video
+
+```bash
+ppe-guard predict site_photo.jpg --save out/
+ppe-guard predict photos/ --require helmet,vest,mask
+ppe-guard predict shift_recording.mp4 --show --save out/
+ppe-guard predict rtsp://user:pass@192.168.1.20/stream1 --show
 ```
-Model-Training/yolov8-finetuning-for-ppe-detection.ipynb
+
+```text
+site_photo.jpg: 3 worker(s), 1 non-compliant
+     p0  compliant  helmet=worn, vest=worn, mask=unknown
+     p1  violation  helmet=missing, vest=worn, mask=unknown
+     p2  compliant  helmet=worn, vest=worn, mask=unknown
 ```
 
-## Dataset Information
+Add `--fail-on-violation` to exit with status 1 when something is found, which is handy for scripts
+and batch jobs.
 
-**Construction Site Safety Image Dataset** sourced from [Roboflow](https://universe.roboflow.com/roboflow-universe-projects/construction-site-safety):
-- **Total Images**: 2,801 annotated images
-- **Classes**: 10 categories including PPE and non-PPE objects
-- **Annotation Format**: YOLO format with normalized coordinates
-- **Diversity**: Wide variety of construction site scenarios, lighting conditions, and worker configurations
-- **Quality**: Professional annotations with high inter-rater agreement
+### Run the dashboard
 
-## Future Enhancements
+```bash
+ppe-guard serve                      # http://localhost:8000
+```
 
-1. **Extended Training**: Explore training with additional epochs and learning rate scheduling for marginal performance gains
-2. **Multi-Model Ensemble**: Compare and ensemble with YoloV8n, YoloV8m, and YoloV8l variants for improved robustness
-3. **Worker Tracking**: Implement DeepSORT or SORT algorithms for individual worker ID tracking across frames
-4. **Alert System**: Automated alarm triggering when workers detected without proper PPE
-5. **Database Logging**: Persistent storage of PPE violations for compliance reporting
-6. **Mobile Deployment**: Convert model to ONNX/TensorFlow Lite for edge device deployment
-7. **Performance Optimization**: Model quantization and pruning for faster inference on edge devices
-8. **Multi-Camera Support**: Scalable architecture for simultaneous monitoring of multiple camera feeds
+Open **Settings** and add your cameras (webcam index `0`, a video file path or an `rtsp://` URL),
+choose the required PPE, then press **Start** on the **Live** page.
+
+### Docker
+
+```bash
+docker compose up -d --build         # CPU image, http://localhost:8000
+```
+
+For an NVIDIA GPU, build with `--build-arg TORCH_INDEX=https://download.pytorch.org/whl/cu128` and
+uncomment the `deploy` block in [`docker-compose.yml`](docker-compose.yml). Settings, the database
+and snapshots are kept in `./data`, and model weights in `./models`.
+
+> [!WARNING]
+> The dashboard has no login. It binds to `localhost` by default. If you expose it on a network,
+> put it behind a reverse proxy with authentication (for example Caddy, nginx or Tailscale).
+
+## The dashboard
+
+| Live | Violations | Settings |
+| --- | --- | --- |
+| ![Live view](docs/assets/dashboard-live.png) | ![Violations](docs/assets/dashboard-violations.png) | ![Settings](docs/assets/dashboard-settings.png) |
+
+- **Live**: an annotated stream per camera with every worker's ID and PPE status, and a live
+  event feed.
+- **Violations**: filter by camera, missing item, period, status and review state. Open an
+  entry to see its snapshots, add a note, mark it reviewed or delete it. **Export CSV** downloads
+  the filtered list.
+- **Settings**: required PPE, timing, detection, alerts and cameras. Changes apply to running
+  cameras within a second, except the model, which applies on the next camera start.
+
+### Settings reference
+
+| Setting | Default | Meaning |
+| --- | --- | --- |
+| Required PPE | helmet, vest | Items every worker must wear |
+| `violation_delay` | 2 s | How long an item must look missing before a violation opens |
+| `clear_after` | 3 s | How long a worker must be compliant before the violation closes |
+| `lost_timeout` | 3 s | How long a worker may be out of view before being forgotten |
+| `treat_unseen_as_missing` | off | Strict mode: required items that can't be seen count as missing |
+| `min_overlap` | 0.5 | Share of a PPE box that must lie inside a person box to be assigned |
+| `snapshot_interval` / `max_snapshots` | 10 s / 5 | Evidence frames saved per violation |
+| `confidence` / `iou` | 0.40 / 0.50 | Detector thresholds |
+| `max_fps` | 15 | Processing cap per camera |
+| `webhook_url`, `format`, `cooldown` | none, generic, 60 s | Alerts |
+
+Settings are stored in `data/settings.json`. Change the folder with `--data-dir` or
+`PPE_GUARD_DATA_DIR`.
+
+### API
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/health`, `/api/stats` | Health and summary counts |
+| `GET` `PUT` | `/api/settings` | Read or replace settings (validated) |
+| `GET` `POST` | `/api/cameras` | List or add cameras |
+| `PUT` `DELETE` | `/api/cameras/{id}` | Edit or remove a camera |
+| `POST` | `/api/cameras/{id}/start`, `/stop` | Control processing |
+| `GET` | `/api/cameras/{id}/stream` | Annotated MJPEG stream |
+| `GET` | `/api/violations` | Filter, sort and page violations |
+| `GET` | `/api/violations/export.csv` | CSV export (same filters) |
+| `GET` `DELETE` | `/api/violations/{id}` | Details with snapshots, or delete |
+| `POST` | `/api/violations/{id}/ack` | Mark reviewed, with an optional note |
+| `WS` | `/ws` | Live frame summaries and violation events |
+
+Interactive API docs are served at `/docs`.
+
+## Model results
+
+Both models were fine-tuned from COCO weights on the
+[Construction Site Safety dataset](https://universe.roboflow.com/roboflow-universe-projects/construction-site-safety)
+(2,605 train images including Roboflow's augmented copies, 114 validation and 82 test images) at 640 px, batch 16, for 200 epochs, on an
+RTX 5060 Ti (16 GB). They were evaluated with `ppe-guard val` at the same settings. The **test**
+split was never used for training or model selection.
+
+| Model | Split | Precision | Recall | mAP50 | mAP50-95 | GPU inference |
+| --- | --- | --- | --- | --- | --- | --- |
+| **ppe-yolo26s** (default) | val | {{Y26_VAL}} |
+| | test | {{Y26_TEST}} |
+| ppe-yolov8s (v1) | val | 0.950 | 0.800 | 0.864 | 0.604 | {{V8_SPEED}} |
+| | test | 0.923 | 0.782 | 0.814 | 0.556 | |
+
+{{RESULTS_NOTE}}
+
+**Where the models struggle** (test split, both models): `NO-Hardhat` has the lowest recall of
+the PPE classes, so a bare head is harder to confirm than a helmet. Small or distant `Safety Cone`s
+are often missed. Low light, unusual helmet colours and heavy occlusion all reduce accuracy. Use
+the confidence threshold and `violation_delay` to trade missed violations against false alarms,
+and check a sample of footage from your own site before relying on it.
+
+Training curves, confusion matrices and per-epoch metrics are in
+[`training/results/`](training/results/).
+
+## Training
+
+```bash
+pip install -e ".[dataset]"
+ppe-guard dataset download                       # Kaggle mirror of the Roboflow dataset → datasets/css
+ppe-guard train --model yolo26s.pt --epochs 200  # any Ultralytics detector: yolo11s.pt, yolov8m.pt, ...
+ppe-guard val --weights runs/detect/yolo26s-css/weights/best.pt --split test
+ppe-guard export --weights runs/detect/yolo26s-css/weights/best.pt --format onnx   # or engine, openvino, tflite...
+```
+
+To use your own model in the dashboard, set **Settings → Detection → Model** to the `.pt` path. A
+model trained on another PPE dataset works too, as long as its class names include a person class
+and `hardhat`/`helmet`, `vest` or `mask` style names (with `NO-` variants for missing items).
+
+The original exploratory notebook, which produced the v1 YOLOv8s model, is in
+[`training/yolov8-finetuning-for-ppe-detection.ipynb`](training/yolov8-finetuning-for-ppe-detection.ipynb).
+
+## Project layout
+
+```text
+src/ppe_guard/
+  compliance.py   per-worker PPE association, smoothing and violation lifecycle
+  detector.py     YOLO + tracker wrapper and frame drawing
+  camera.py       one processing thread per camera
+  storage.py      SQLite violations database and snapshots
+  alerts.py       webhook alerts
+  server/         FastAPI app and the dashboard (plain HTML/JS/CSS, no build step)
+  cli.py          the ppe-guard command
+training/         data.yaml, the original notebook, published results
+tests/            unit and API tests (CPU only, no weights needed)
+docs/             GitHub Pages site and README images
+```
+
+## Roadmap
+
+- Zones: only enforce PPE inside drawn areas, with different rules per zone
+- More PPE: gloves, safety glasses and harnesses (needs more labelled data)
+- Optional login and roles for the dashboard
+- Daily and weekly PDF compliance summaries
+- Edge deployment guides (Jetson, Raspberry Pi with Hailo, OpenVINO)
+
+Ideas and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Acknowledgements and licences
+
+- Dataset: [Construction Site Safety](https://universe.roboflow.com/roboflow-universe-projects/construction-site-safety)
+  (export v28) from Roboflow Universe, licensed **CC BY 4.0**, mirrored on
+  [Kaggle](https://www.kaggle.com/datasets/snehilsanyal/construction-site-safety-image-dataset-roboflow).
+  Its images come from several public Roboflow projects and YouTube videos (see the dataset README).
+- Detection and tracking: [Ultralytics](https://github.com/ultralytics/ultralytics) (YOLOv8,
+  YOLO26, ByteTrack integration).
+- The training notebook builds on community Kaggle work on YOLOv8 PPE fine-tuning.
+
+PPE Guard's own code is released under the [MIT License](LICENSE). Ultralytics, and therefore
+models trained and run with it, are licensed under **AGPL-3.0** by Ultralytics. Commercial or
+closed-source use may need an [Ultralytics Enterprise licence](https://www.ultralytics.com/license).
+Check your obligations before deploying.
+
+## Support
+
+If this project helps you, you can support it through
+[Ko-fi](https://ko-fi.com/izeno), [Buy Me a Coffee](https://buymeacoffee.com/izeno),
+[Liberapay](https://liberapay.com/izeno) or [Open Collective](https://opencollective.com/voxdroid).
